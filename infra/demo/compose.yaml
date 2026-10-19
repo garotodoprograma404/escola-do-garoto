@@ -1,0 +1,145 @@
+# Ambiente de DEMONSTRAÇÃO num servidor que já tem o Coolify (o Traefik dele ocupa as portas 80/443).
+# Pagamento simulado e e-mail no log, site aberto ao público. Passo a passo em
+# docs/deploy.md ("Demonstração atrás do Coolify").
+#
+#   docker network create escola-demo && docker network connect escola-demo coolify-proxy  # uma vez
+#   docker compose -f infra/demo/compose.yaml --env-file infra/demo/.env up -d --build
+#
+# Nenhum serviço daqui entra na rede `coolify`: lá o nome `postgres` resolveria para o banco do
+# próprio Coolify. Quem atravessa a fronteira é o proxy, conectado à rede `escola-demo`.
+name: escola-demo
+
+services:
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    restart: unless-stopped
+    # Ajustes para disco SSD e consultas curtas (ver docs/deploy.md).
+    command: ['postgres', '-c', 'random_page_cost=1.1', '-c', 'jit=off']
+    environment:
+      POSTGRES_USER: escola
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: escola
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U escola -d escola']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: '3333'
+      # O Traefik é outro container na rede privada: confia no X-Forwarded-For que ELE define (o
+      # Traefik descarta o que o visitante manda, porque não confia em ninguém por padrão).
+      TRUSTED_PROXIES: uniquelocal
+      DATABASE_URL: postgresql://escola:${POSTGRES_PASSWORD}@postgres:5432/escola
+      WEB_ORIGIN: https://${DOMINIO:?defina DOMINIO}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?defina INTERNAL_API_KEY}
+      FILES_DIR: /data/files
+      FILES_SIGNING_SECRET: ${FILES_SIGNING_SECRET:?defina FILES_SIGNING_SECRET}
+      DEMO_MODE: 'true'
+      PAYMENT_DRIVER: fake
+      MAIL_DRIVER: console
+      # Conteúdo da demonstração (seed-demo): vídeos servidos pelo `midia`, imagens lidas daqui.
+      DEMO_MEDIA_URL: https://${DOMINIO}/midia
+      DEMO_ASSETS_DIR: /demo-assets
+    volumes:
+      - files:/data/files
+      - ${DEMO_MIDIA_DIR:-/opt/escola-do-garoto-midia}:/demo-assets:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3333/api/health >/dev/null || exit 1']
+      interval: 15s
+      timeout: 3s
+      start_period: 40s
+      retries: 5
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: escola-demo
+      # /api/* vai direto para o NestJS, sem passar pelo Next (igual ao Caddyfile de produção).
+      traefik.http.routers.escola-api.entryPoints: https
+      traefik.http.routers.escola-api.rule: Host(`${DOMINIO}`) && PathPrefix(`/api`)
+      traefik.http.routers.escola-api.middlewares: escola-gzip
+      traefik.http.routers.escola-api.service: escola-api
+      traefik.http.routers.escola-api.tls: 'true'
+      traefik.http.routers.escola-api.tls.certresolver: letsencrypt
+      traefik.http.services.escola-api.loadbalancer.server.port: '3333'
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_URL: https://${DOMINIO}
+        API_URL: http://api:3333
+        DEMO_MODE: 'true'
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_URL: http://api:3333
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      SITE_URL: https://${DOMINIO}
+      IMAGE_HOSTS: ${IMAGE_HOSTS:-}
+      DEMO_MODE: 'true'
+      PAYMENT_SIMULATOR: 'true'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/login >/dev/null || exit 1']
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: escola-demo
+      # Middlewares com nome próprio: não dependem do que outro sistema do servidor definiu.
+      traefik.http.middlewares.escola-gzip.compress: 'true'
+      traefik.http.middlewares.escola-https.redirectscheme.scheme: https
+      # :80 só redireciona para HTTPS (e deixa o Let's Encrypt validar o domínio).
+      traefik.http.routers.escola-http.entryPoints: http
+      traefik.http.routers.escola-http.rule: Host(`${DOMINIO}`)
+      traefik.http.routers.escola-http.middlewares: escola-https
+      traefik.http.routers.escola-http.service: escola-web
+      traefik.http.routers.escola-web.entryPoints: https
+      traefik.http.routers.escola-web.rule: Host(`${DOMINIO}`)
+      traefik.http.routers.escola-web.middlewares: escola-gzip
+      traefik.http.routers.escola-web.service: escola-web
+      traefik.http.routers.escola-web.tls: 'true'
+      traefik.http.routers.escola-web.tls.certresolver: letsencrypt
+      traefik.http.services.escola-web.loadbalancer.server.port: '3000'
+
+  # Vídeos e imagens da demonstração (pasta do servidor, fora do código): /midia/videos/*.mp4.
+  midia:
+    image: docker.io/library/nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ${DEMO_MIDIA_DIR:-/opt/escola-do-garoto-midia}:/usr/share/nginx/html/midia:ro
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: escola-demo
+      traefik.http.routers.escola-midia.entryPoints: https
+      traefik.http.routers.escola-midia.rule: Host(`${DOMINIO}`) && PathPrefix(`/midia`)
+      traefik.http.routers.escola-midia.service: escola-midia
+      traefik.http.routers.escola-midia.tls: 'true'
+      traefik.http.routers.escola-midia.tls.certresolver: letsencrypt
+      traefik.http.services.escola-midia.loadbalancer.server.port: '80'
+
+volumes:
+  pgdata:
+  files:
+
+networks:
+  # Criada uma vez fora do compose (ver o topo), para o proxy continuar ligado entre um deploy e outro.
+  default:
+    name: escola-demo
+    external: true

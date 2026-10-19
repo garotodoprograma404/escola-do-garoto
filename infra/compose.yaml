@@ -1,0 +1,23 @@
+# Postgres local de desenvolvimento. Sobe com `pnpm db:up` (Podman ou Docker).
+services:
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    container_name: escola-postgres
+    # Ajustes para disco SSD e consultas curtas (ver docs/deploy.md).
+    command: ['postgres', '-c', 'random_page_cost=1.1', '-c', 'jit=off']
+    environment:
+      POSTGRES_USER: escola
+      POSTGRES_PASSWORD: escola
+      POSTGRES_DB: escola
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - escola-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U escola -d escola']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  escola-pgdata:

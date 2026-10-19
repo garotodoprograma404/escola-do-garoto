@@ -1,0 +1,2 @@
+ALTER TABLE "certificates" DROP CONSTRAINT "certificates_code_format_check";--> statement-breakpoint
+ALTER TABLE "certificates" ADD CONSTRAINT "certificates_code_format_check" CHECK (code ~ '^[A-Z]{2,8}-[0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$'::text);

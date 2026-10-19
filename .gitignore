@@ -1,0 +1,24 @@
+# Dependências e builds
+node_modules/
+dist/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Ambiente (nunca versionar segredos)
+.env
+.env.*
+!.env.example
+
+# Sistema / editores
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Arquivos enviados em desenvolvimento
+apps/api/storage/

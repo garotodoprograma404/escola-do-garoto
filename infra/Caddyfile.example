@@ -1,0 +1,30 @@
+# Proxy reverso de PRODUÇÃO (Caddy). Copie para `Caddyfile` e troque o domínio.
+#
+# Por que ele existe (não é opcional):
+#  1. O limite de tentativas e o registro de sessões usam o IP do usuário. O Caddy SOBRESCREVE o
+#     X-Forwarded-For com o IP real da conexão. O rewrite do Next (usado só em desenvolvimento)
+#     repassa o cabeçalho que o cliente mandou, e aí qualquer um burla o limite.
+#  2. HTTPS automático (o cookie de sessão é Secure e o WEB_ORIGIN precisa ser https).
+#
+# A API (:3333) e o Next (:3000) escutam só em 127.0.0.1: o mundo só chega pelo Caddy.
+escola.exemplo.com.br {
+	encode zstd gzip
+
+	# /api/* vai direto para o NestJS, sem passar pelo Next.
+	handle /api/* {
+		reverse_proxy 127.0.0.1:3333
+	}
+
+	# As PÁGINAS não têm limite próprio (o Next não limita): limite por IP aqui, na borda.
+	# Exige o módulo caddy-ratelimit (xcaddy build --with github.com/mholt/caddy-ratelimit).
+	# rate_limit {
+	#     zone paginas {
+	#         key {remote_host}
+	#         events 120
+	#         window 1m
+	#     }
+	# }
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}

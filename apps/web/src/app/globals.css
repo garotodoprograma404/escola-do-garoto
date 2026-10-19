@@ -1,0 +1,249 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    /* Card */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* Primary */
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    /* Muted */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 40%;
+
+    /* Accent */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* Destructive */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Border & Input */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    /* Radius */
+    --radius: 0.5rem;
+
+    /* Brand colors - Default (will be overridden by layout.tsx from database) */
+    --brand-50: 48 100% 96%;
+    --brand-100: 48 96% 89%;
+    --brand-200: 48 97% 77%;
+    --brand-300: 46 97% 65%;
+    --brand-400: 43 96% 56%;
+    --brand-500: 38 92% 50%;
+    --brand-600: 32 95% 44%;
+    --brand-700: 26 90% 37%;
+    --brand-800: 23 83% 31%;
+    --brand-900: 22 78% 26%;
+    --brand-950: 21 92% 14%;
+  }
+
+  .dark {
+    /* Base colors */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    /* Card */
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover */
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary */
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    /* Secondary */
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted */
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    /* Accent */
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    /* Destructive */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Border & Input */
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    /* Brand colors in dark mode - same as light (will be overridden by layout.tsx) */
+    --brand-50: 22 78% 26%;
+    --brand-100: 23 83% 31%;
+    --brand-200: 26 90% 37%;
+    --brand-300: 32 95% 44%;
+    --brand-400: 38 92% 50%;
+    --brand-500: 43 96% 56%;
+    --brand-600: 46 97% 65%;
+    --brand-700: 48 97% 77%;
+    --brand-800: 48 96% 89%;
+    --brand-900: 48 100% 96%;
+    --brand-950: 48 100% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Faixa fixa do ambiente de demonstração (DemoBanner define a altura; fora dele vale 0). */
+    padding-top: var(--demo-bar, 0px);
+  }
+}
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  @apply focus:outline-none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply pointer-events-none float-left h-0 text-muted-foreground;
+}
+
+.ProseMirror h1 {
+  @apply mb-4 mt-6 text-4xl font-bold;
+}
+
+.ProseMirror h2 {
+  @apply mb-3 mt-5 text-3xl font-bold;
+}
+
+.ProseMirror h3 {
+  @apply mb-2 mt-4 text-2xl font-bold;
+}
+
+.ProseMirror p {
+  @apply my-3;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  @apply my-3 pl-6;
+}
+
+.ProseMirror ul {
+  @apply list-disc;
+}
+
+.ProseMirror ol {
+  @apply list-decimal;
+}
+
+.ProseMirror li {
+  @apply my-1;
+}
+
+.ProseMirror blockquote {
+  @apply my-4 border-l-4 border-primary pl-4 italic;
+}
+
+.ProseMirror code {
+  @apply rounded bg-muted px-1.5 py-0.5 font-mono text-sm;
+}
+
+.ProseMirror pre {
+  @apply my-4 overflow-x-auto rounded-lg bg-muted p-4;
+}
+
+.ProseMirror pre code {
+  @apply bg-transparent p-0;
+}
+
+.ProseMirror a {
+  @apply cursor-pointer text-primary underline;
+}
+
+.ProseMirror img {
+  @apply my-4 h-auto max-w-full rounded-lg;
+}
+
+.ProseMirror hr {
+  @apply my-6 border-t border-border;
+}
+
+.ProseMirror strong {
+  @apply font-bold;
+}
+
+.ProseMirror em {
+  @apply italic;
+}
+
+.ProseMirror s {
+  @apply line-through;
+}
+
+/* Custom Scrollbar Styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgb(203 213 225 / 0.5);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgb(203 213 225 / 0.8);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85 / 0.5);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgb(51 65 85 / 0.8);
+}
+
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thumb-slate-300::-webkit-scrollbar-thumb {
+  background: rgb(203 213 225);
+}
+
+.scrollbar-thumb-slate-700::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85);
+}

@@ -1,0 +1,28 @@
+name: Verificação
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verificacao:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Tipos
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Formatação
+        run: pnpm exec prettier --check .
+      - name: Build
+        run: pnpm build

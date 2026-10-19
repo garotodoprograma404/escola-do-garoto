@@ -1,0 +1,22 @@
+# Proxy reverso de produção (HTTPS automático via Let's Encrypt). O domínio vem da variável DOMINIO.
+#
+# Por que ele é obrigatório: o limite de tentativas e o registro de sessões usam o IP do usuário, e
+# é o Caddy que define o IP REAL (sobrescreve qualquer X-Forwarded-For que o cliente mande).
+{$DOMINIO} {
+	encode zstd gzip
+
+	# /api/* vai direto para o NestJS, sem passar pelo Next.
+	handle /api/* {
+		reverse_proxy api:3333 {
+			header_up X-Forwarded-For {remote_host}
+			# Stream em tempo real (chat, notificações): não segura a resposta em buffer.
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy web:3000 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+}

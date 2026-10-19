@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="Escola do Garoto;">
+  <rect width="1000" height="1000" fill="#0D1117"/>
+  <!-- franja jogada pro lado, caindo na testa -->
+  <path fill="#39FF88" d="M212 480 C214 300 356 192 520 188 C660 185 775 250 828 378
+    C780 352 700 348 642 356 C600 360 566 375 548 395
+    C540 352 520 322 486 310 C420 288 330 330 272 400 C248 428 228 455 212 480 Z"/>
+  <g fill="none" stroke="#39FF88" stroke-width="58" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="500" cy="545" r="300"/>
+    <!-- sorriso: o ")" deitado, de canto -->
+    <path d="M365 660 Q525 770 668 628"/>
+  </g>
+  <!-- olho aberto: o ponto do ";" -->
+  <circle cx="625" cy="490" r="44" fill="#39FF88"/>
+  <!-- olho piscando -->
+  <path fill="none" stroke="#FF2E88" stroke-width="52" stroke-linecap="round"
+        d="M335 500 Q398 446 461 500"/>
+</svg>

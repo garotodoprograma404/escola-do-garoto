@@ -1,0 +1,11 @@
+export type CertificateTemplateStatus = 'draft' | 'published' | 'archived'
+export type CertificateTemplateOrientation = 'landscape' | 'portrait'
+export type CertificateStatus = 'active' | 'revoked' | 'replaced' | 'issue_failed'
+export type CertificateIssueMode = 'automatic' | 'manual' | 'reissue'
+export type CertificateEventType =
+  | 'issued_automatic'
+  | 'issued_manual'
+  | 'issue_failed'
+  | 'reissued_same_code'
+  | 'reissued_new_code'
+  | 'revoked'

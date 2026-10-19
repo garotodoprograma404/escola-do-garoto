@@ -1,0 +1,6 @@
+export { DashboardStats } from './components/DashboardStats'
+export { RevenueChart } from './components/RevenueChart'
+export { RecentSales } from './components/RecentSales'
+export { CoursePerformanceTable } from './components/CoursePerformanceTable'
+export { producerDashboardService } from './services/dashboardService'
+export type * from './types'

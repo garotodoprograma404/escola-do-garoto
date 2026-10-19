@@ -1,0 +1,2 @@
+DROP INDEX "idx_affiliate_links_slug_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_affiliate_links_slug_unique" ON "affiliate_links" USING btree ("partnership_id","slug") WHERE (slug IS NOT NULL);
