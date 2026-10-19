@@ -60,7 +60,9 @@ export class WithdrawalsService {
 
       const { balance } = await loadProducerBalance(tx, producerId)
       if (amountCents > balance.available) {
-        throw new UnprocessableEntityException('Saldo insuficiente')
+        throw new UnprocessableEntityException(
+          'Saldo insuficiente. As vendas dos últimos 7 dias ficam a liberar até passar o prazo de reembolso do aluno.',
+        )
       }
 
       const [created] = await tx

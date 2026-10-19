@@ -20,17 +20,17 @@ export function BalanceCards({ balance }: BalanceCardsProps) {
       color: 'text-green-600',
     },
     {
-      title: 'Saldo Pendente',
+      title: 'Saldo a Liberar',
       value: balance.pending,
       icon: Clock,
-      description: 'Aguardando compensação',
+      description: 'Vendas dos últimos 7 dias (prazo de reembolso do aluno)',
       color: 'text-yellow-600',
     },
     {
       title: 'Saldo Total',
       value: balance.total,
       icon: DollarSign,
-      description: 'Disponível + Pendente',
+      description: 'Disponível + a liberar',
       color: 'text-blue-600',
     },
     {

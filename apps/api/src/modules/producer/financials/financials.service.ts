@@ -9,6 +9,7 @@ import {
   withdrawals,
 } from '../../../database/schema/index.js'
 import { fromCents, toCents } from '../money.js'
+import { REFUND_WINDOW_DAYS } from '../../finance/refund-request.js'
 import { computeProducerBalance, type ProducerBalanceCents } from './balance.js'
 
 /**
@@ -104,9 +105,12 @@ export async function loadProducerBalance(
   hasRevenueData: boolean
   openWithdrawals: number
 }> {
+  // Venda dos últimos 7 dias fica retida: o aluno ainda pode pedir reembolso dela.
+  const releaseCutoff = new Date(Date.now() - REFUND_WINDOW_DAYS * 86_400_000)
   const [sales] = await executor
     .select({
-      gross: sql<string>`coalesce(sum(abs(${transactions.amount})) filter (where ${transactions.type} = 'sale' and ${transactions.status} = 'completed'), 0)::text`,
+      gross: sql<string>`coalesce(sum(abs(${transactions.amount})) filter (where ${transactions.type} = 'sale' and ${transactions.status} = 'completed' and ${transactions.createdAt} <= ${releaseCutoff}), 0)::text`,
+      held: sql<string>`coalesce(sum(abs(${transactions.amount})) filter (where ${transactions.type} = 'sale' and ${transactions.status} = 'completed' and ${transactions.createdAt} > ${releaseCutoff}), 0)::text`,
       pending: sql<string>`coalesce(sum(abs(${transactions.amount})) filter (where ${transactions.type} = 'sale' and ${transactions.status} = 'pending'), 0)::text`,
       refunds: sql<string>`coalesce(sum(abs(${transactions.amount})) filter (where ${transactions.type} = 'refund' and ${transactions.status} in ('completed', 'refunded')), 0)::text`,
       commissions: sql<number>`(count(*) filter (where ${transactions.type} in ('commission', 'affiliate_commission')))::int`,
@@ -123,18 +127,21 @@ export async function loadProducerBalance(
     .where(and(eq(withdrawals.userId, producerId), eq(withdrawals.accountScope, 'producer')))
 
   const grossSalesCents = toCents(sales?.gross)
+  const heldSalesCents = toCents(sales?.held)
   const pendingSalesCents = toCents(sales?.pending)
   const refundsCents = toCents(sales?.refunds)
 
   return {
     balance: computeProducerBalance({
       grossSalesCents,
+      heldSalesCents,
       pendingSalesCents,
       refundsCents,
       reservedWithdrawalsCents: toCents(saques?.reserved),
     }),
     hasRevenueData:
       grossSalesCents > 0 ||
+      heldSalesCents > 0 ||
       pendingSalesCents > 0 ||
       refundsCents > 0 ||
       (sales?.commissions ?? 0) > 0,

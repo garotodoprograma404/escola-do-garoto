@@ -160,3 +160,11 @@ quem tira o acesso, revoga o certificado e desconta produtor e afiliado é o pag
 `applyPayment` do webhook. Assim existe um caminho só para estorno (pelo painel da plataforma, pelo painel
 do Mercado Pago ou por chargeback). O prazo para pedir é de **7 dias**, igual à política de reembolso
 publicada e ao direito de arrependimento (CDC, art. 49). Estorno parcial fica de fora.
+
+## Venda do produtor retida durante o prazo de reembolso
+
+A parte do produtor numa venda fica "a liberar" nos 7 dias em que o aluno pode pedir reembolso e só depois
+entra no saldo disponível para saque. Sem isso, o produtor sacava na hora e, se o reembolso fosse aprovado,
+a plataforma devolvia o dinheiro ao aluno sem conseguir cobrar a diferença (o saldo só para no zero). A
+retenção é calculada pela data da venda na conta do saldo (`loadProducerBalance`), sem mudar o status das
+transações: receita, dashboard e Analytics continuam mostrando a venda na hora.

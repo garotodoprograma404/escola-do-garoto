@@ -42,6 +42,8 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ### Mudado
 
+- A parte do produtor numa venda fica "a liberar" por 7 dias (o prazo de reembolso do aluno) antes de poder
+  ser sacada.
 - Sem credenciais do Mercado Pago, a API sobe normalmente: em desenvolvimento a compra usa o simulador e
   em produção a compra de cursos pagos fica desligada, com aviso claro.
 

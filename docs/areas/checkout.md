@@ -111,7 +111,9 @@ Checkout com Mercado Pago, cupons, financeiro do aluno e financeiro do admin. C�
     devolvido conta uma vez só no resumo do aluno (pela compra `refunded`);
   - compra sem pagamento estornável (`FREE_`, `ORDER_`, ou do simulador fora do modo simulador): a API recusa
     aprovar e o admin devolve por fora;
-  - a compra que um produtor faz como aluno (e o reembolso dela) nunca entra no saldo de produtor dele.
+  - a compra que um produtor faz como aluno (e o reembolso dela) nunca entra no saldo de produtor dele;
+  - a parte do produtor fica **a liberar** por 7 dias (o mesmo prazo do reembolso) antes de poder ser
+    sacada; a do afiliado já fica retida por 30 dias.
     A taxa de reembolso do painel do admin é reembolsados / pagos.
 - **Saque do admin:** aprovar, processar, rejeitar e marcar como pago (aprovado → concluído).
 

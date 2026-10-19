@@ -35,8 +35,11 @@ financeiro usa (`loadProducerBalance`/`computeProducerBalance`) e só então gra
 no máximo 2 casas decimais, método `pix` ou `bank_transfer` com os dados obrigatórios,
 `account_scope='producer'` sempre.
 
-Saldo disponível = vendas concluídas − reembolsos − saques do produtor em `pending`, `approved`,
-`processing` ou `completed`. Saque recusado ou cancelado devolve o saldo. O formulário de saque
+Saldo disponível = vendas concluídas **liberadas** − reembolsos − saques do produtor em `pending`,
+`approved`, `processing` ou `completed`. Saque recusado ou cancelado devolve o saldo. A venda fica **a
+liberar** nos 7 dias do prazo de reembolso do aluno (`REFUND_WINDOW_DAYS`) e só depois entra no
+disponível: o produtor não saca um valor que ainda pode voltar para o aluno. A compra que o produtor faz
+como aluno nunca entra nessas contas. O formulário de saque
 (`requestWithdrawalAction` e `WithdrawalForm`) é compartilhado com o painel do afiliado: chama
 `POST /api/producer/withdrawals` para produtor e `POST /api/affiliate/withdrawals` para afiliado, com o
 mesmo corpo (`amount`, `method`, `pix_key`, `bank_code`, `bank_agency`, `bank_account`, `account_type`).
