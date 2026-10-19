@@ -29,3 +29,18 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Preço sempre recalculado no servidor; webhook de pagamento assinado e idempotente.
 
 ## [Não lançado]
+
+### Adicionado
+
+- Mercado Pago configurado pelo painel do admin (Configurações → Financeiro): cole o Access Token e a
+  assinatura do webhook, a plataforma confere o token na hora e mostra a conta, se é de teste ou de
+  produção e o endereço do webhook pronto para copiar. Nada de pagamento no `.env`.
+
+### Mudado
+
+- Sem credenciais do Mercado Pago, a API sobe normalmente: em desenvolvimento a compra usa o simulador e
+  em produção a compra de cursos pagos fica desligada, com aviso claro.
+
+### Segurança
+
+- As credenciais ficam cifradas no banco (AES-256-GCM) e nunca voltam para a tela nem para o log.

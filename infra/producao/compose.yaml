@@ -39,13 +39,10 @@ services:
       TRUSTED_PROXIES: uniquelocal
       DATABASE_URL: postgresql://escola:${POSTGRES_PASSWORD}@postgres:5432/escola
       WEB_ORIGIN: https://${DOMINIO:?defina DOMINIO}
-      API_PUBLIC_URL: https://${DOMINIO}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?defina INTERNAL_API_KEY}
       FILES_DIR: /data/files
       FILES_SIGNING_SECRET: ${FILES_SIGNING_SECRET:?defina FILES_SIGNING_SECRET}
-      PAYMENT_DRIVER: mercadopago
-      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:?defina MERCADOPAGO_ACCESS_TOKEN}
-      MERCADOPAGO_WEBHOOK_SECRET: ${MERCADOPAGO_WEBHOOK_SECRET:?defina MERCADOPAGO_WEBHOOK_SECRET}
+      # Mercado Pago: configurado no painel do admin (fica cifrado no banco).
       MAIL_DRIVER: smtp
       SMTP_HOST: ${SMTP_HOST:?defina SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}

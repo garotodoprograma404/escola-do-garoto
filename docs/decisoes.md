@@ -52,8 +52,9 @@ cupom.
 Checkout Pro por `fetch`, sem SDK. Webhook com assinatura HMAC obrigatória; a notificação só traz o
 id, então o pagamento é **reconsultado** e conferido (moeda, valor e referência) antes de mudar o
 pedido. Um único caminho muda o estado do pedido (`PaymentsService.applyPayment`), com trava de linha e
-idempotência. Em desenvolvimento, `PAYMENT_DRIVER=fake` liga um simulador que passa pelas mesmas
-validações; é proibido em produção. Detalhes em [areas/checkout.md](areas/checkout.md).
+idempotência. As credenciais são cadastradas pelo admin no painel e guardadas
+cifradas no banco (nada no `.env`); sem elas, desenvolvimento e demonstração usam um simulador que passa
+pelas mesmas validações, e produção recusa pedidos pagos até alguém configurar. Detalhes em [areas/checkout.md](areas/checkout.md).
 
 ## Tempo real por SSE
 
@@ -139,3 +140,14 @@ Pontos, nível, sequência e medalhas nascem dos avisos do módulo `learning` (`
 nunca desfaz uma aula concluída. Cada ponto é uma linha em `xp_events` com chave única por fato (nada
 pontua duas vezes) e as regras ficam em código (`gamification.rules.ts`), não no banco. Ranking por curso
 e por mês (zera todo mês) com primeiro nome e inicial, e opção de sair dele.
+
+## Mercado Pago configurado pelo painel, não pelo `.env`
+
+Quem sobe a plataforma não precisa mexer em variável de pagamento: o admin cola o Access Token e a
+assinatura do webhook em Configurações → Financeiro, o sistema confere o token no Mercado Pago e guarda os
+dois cifrados (AES-256-GCM) com uma chave derivada do `FILES_SIGNING_SECRET`, que a produção já exige.
+Sem credenciais, a API sobe do mesmo jeito: o checkout pago fica desligado com aviso claro. Os segredos
+nunca voltam para a tela nem para o log de auditoria.
+
+Ainda não conferido com uma conta real do Mercado Pago de ponta a ponta (a conferência do token no
+painel já fala com a API do Mercado Pago).

@@ -48,7 +48,6 @@ services:
       FILES_DIR: /data/files
       FILES_SIGNING_SECRET: ${FILES_SIGNING_SECRET:?defina FILES_SIGNING_SECRET}
       DEMO_MODE: 'true'
-      PAYMENT_DRIVER: fake
       MAIL_DRIVER: console
       # Conteúdo da demonstração (seed-demo): vídeos servidos pelo `midia`, imagens lidas daqui.
       DEMO_MEDIA_URL: https://${DOMINIO}/midia

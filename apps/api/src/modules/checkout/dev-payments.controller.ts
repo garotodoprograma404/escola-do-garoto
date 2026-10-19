@@ -11,8 +11,6 @@ import {
 import type { SessionUser } from '@vox/contracts'
 import { and, eq } from 'drizzle-orm'
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js'
-import { ENV } from '../../config/config.module.js'
-import type { Env } from '../../config/env.js'
 import { DB, type Database } from '../../database/database.module.js'
 import { checkoutOrders } from '../../database/schema/index.js'
 import { CurrentUser } from '../auth/decorators.js'
@@ -22,29 +20,22 @@ import {
   type SimulatePaymentInput,
 } from './checkout.schemas.js'
 import type { GatewayPayment } from './gateway/payment-gateway.js'
+import { DynamicPaymentGateway } from './gateway/dynamic.gateway.js'
 import { OrdersService } from './orders.service.js'
 import type { OrderView } from './order-view.js'
 import { PaymentsService } from './payments.service.js'
 
-/** O simulador só responde com `PAYMENT_DRIVER=fake`, e em produção só no ambiente de demonstração. */
-export function simulatorEnabled(
-  env: Pick<Env, 'NODE_ENV' | 'PAYMENT_DRIVER' | 'DEMO_MODE'>,
-): boolean {
-  if (env.PAYMENT_DRIVER !== 'fake') return false
-  return env.NODE_ENV !== 'production' || env.DEMO_MODE
-}
-
 /**
- * SIMULADOR DE PAGAMENTO, só para desenvolvimento e para o ambiente de demonstração
- * (`PAYMENT_DRIVER=fake`; em produção só com `DEMO_MODE`: trava no `env.ts`, e aqui a rota também
- * responde 404 fora desses modos). O resultado escolhido
+ * SIMULADOR DE PAGAMENTO: só responde quando o gateway em uso é o simulador (desenvolvimento sem
+ * credenciais do Mercado Pago ou ambiente de demonstração; ver `DynamicPaymentGateway`). Fora
+ * disso, 404. O resultado escolhido
  * entra por `PaymentsService.applyPayment`, o mesmo caminho do webhook real (valor, moeda e
  * referência conferidos).
  */
 @Controller('dev/payments')
 export class DevPaymentsController {
   constructor(
-    @Inject(ENV) private readonly env: Env,
+    @Inject(DynamicPaymentGateway) private readonly gateway: DynamicPaymentGateway,
     @Inject(DB) private readonly db: Database,
     @Inject(PaymentsService) private readonly payments: PaymentsService,
     @Inject(OrdersService) private readonly orders: OrdersService,
@@ -57,7 +48,7 @@ export class DevPaymentsController {
     @Param('publicId', new ZodValidationPipe(orderPublicIdSchema)) publicId: string,
     @Body(new ZodValidationPipe(simulatePaymentSchema)) body: SimulatePaymentInput,
   ): Promise<OrderView> {
-    if (!simulatorEnabled(this.env)) {
+    if ((await this.gateway.mode()) !== 'simulator') {
       throw new NotFoundException()
     }
 

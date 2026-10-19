@@ -57,6 +57,13 @@
       "when": 1792422917546,
       "tag": "0007_certificate_code_prefix",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792424887485,
+      "tag": "0008_payment_gateway_credentials",
+      "breakpoints": true
     }
   ]
 }

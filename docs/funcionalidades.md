@@ -91,26 +91,27 @@ Legenda:
 
 ## Administrador
 
-| Funcionalidade                                  | Rota                                             | Situação | Observação                                             |
-| ----------------------------------------------- | ------------------------------------------------ | -------- | ------------------------------------------------------ |
-| Painel geral                                    | `/admin`                                         | ✅       |                                                        |
-| Usuários: criar, editar, papéis, suspender      | `/admin/users`                                   | ✅       | protege o último admin                                 |
-| Cursos: aprovar, rejeitar, mover para rascunho  | `/admin/courses`                                 | ✅       |                                                        |
-| Cursos: pedir alterações ao produtor            | `/admin/courses`                                 | ✅       |                                                        |
-| Cursos: arquivar                                | `/admin/courses`                                 | ✅       | sai do catálogo e há a aba Arquivados                  |
-| Cursos: criar, editar e matricular aluno        | `/admin/courses/new`, `/admin/courses/[id]/edit` | ✅       |                                                        |
-| Categorias                                      | `/admin/categories`                              | ✅       | hierarquia e ordem                                     |
-| Cupons                                          | `/admin/coupons`                                 | ✅       |                                                        |
-| Certificados: modelos e construtor              | `/admin/certificates`                            | ✅       | versões e prévia                                       |
-| Certificados: ligar modelo a um curso           | `/admin/certificates`                            | ✅       | tabela de cursos com o template de cada um             |
-| Certificados: emitir manualmente e revogar      | `/admin/certificates`                            | ✅       | emissão manual por curso e aluno, revogação com motivo |
-| Blog                                            | `/admin/blog`                                    | ✅       | editor rico com HTML sanitizado                        |
-| Banners e vitrines                              | `/admin/content`                                 | ✅       | a home exibe e conta os cliques                        |
-| Configurações (geral, marca, financeiro, legal) | `/admin/settings`                                | ✅       |                                                        |
-| Suporte: central de tickets                     | `/admin/support`                                 | ✅       |                                                        |
-| Financeiro: métricas e saques                   | `/admin/finance`                                 | ✅       |                                                        |
-| Produtores: candidaturas e contatos             | `/admin/producer-leads`                          | ✅       | aprovar concede o papel                                |
-| Afiliados: candidaturas e parcerias             | `/admin/affiliates`                              | ✅       |                                                        |
+| Funcionalidade                                  | Rota                                             | Situação | Observação                                                                                         |
+| ----------------------------------------------- | ------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------- |
+| Painel geral                                    | `/admin`                                         | ✅       |                                                                                                    |
+| Usuários: criar, editar, papéis, suspender      | `/admin/users`                                   | ✅       | protege o último admin                                                                             |
+| Cursos: aprovar, rejeitar, mover para rascunho  | `/admin/courses`                                 | ✅       |                                                                                                    |
+| Cursos: pedir alterações ao produtor            | `/admin/courses`                                 | ✅       |                                                                                                    |
+| Cursos: arquivar                                | `/admin/courses`                                 | ✅       | sai do catálogo e há a aba Arquivados                                                              |
+| Cursos: criar, editar e matricular aluno        | `/admin/courses/new`, `/admin/courses/[id]/edit` | ✅       |                                                                                                    |
+| Categorias                                      | `/admin/categories`                              | ✅       | hierarquia e ordem                                                                                 |
+| Cupons                                          | `/admin/coupons`                                 | ✅       |                                                                                                    |
+| Certificados: modelos e construtor              | `/admin/certificates`                            | ✅       | versões e prévia                                                                                   |
+| Certificados: ligar modelo a um curso           | `/admin/certificates`                            | ✅       | tabela de cursos com o template de cada um                                                         |
+| Certificados: emitir manualmente e revogar      | `/admin/certificates`                            | ✅       | emissão manual por curso e aluno, revogação com motivo                                             |
+| Blog                                            | `/admin/blog`                                    | ✅       | editor rico com HTML sanitizado                                                                    |
+| Banners e vitrines                              | `/admin/content`                                 | ✅       | a home exibe e conta os cliques                                                                    |
+| Configurações (geral, marca, financeiro, legal) | `/admin/settings`                                | ✅       |                                                                                                    |
+| Mercado Pago: credenciais pelo painel           | `/admin/settings` (Financeiro)                   | ✅       | token conferido no Mercado Pago e guardado cifrado; sem credenciais o checkout pago fica desligado |
+| Suporte: central de tickets                     | `/admin/support`                                 | ✅       |                                                                                                    |
+| Financeiro: métricas e saques                   | `/admin/finance`                                 | ✅       |                                                                                                    |
+| Produtores: candidaturas e contatos             | `/admin/producer-leads`                          | ✅       | aprovar concede o papel                                                                            |
+| Afiliados: candidaturas e parcerias             | `/admin/affiliates`                              | ✅       |                                                                                                    |
 
 ## Qualidade transversal
 

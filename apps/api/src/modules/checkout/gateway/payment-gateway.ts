@@ -61,3 +61,10 @@ export abstract class PaymentGateway {
   /** Pagamentos ligados a um pedido (mais recentes primeiro). Usado para sincronizar sem webhook. */
   abstract findPaymentsByReference(orderId: string): Promise<GatewayPayment[]>
 }
+
+/** Produção sem credenciais do Mercado Pago cadastradas no painel: não há como cobrar. */
+export class PaymentsNotConfiguredError extends PaymentGatewayError {
+  constructor() {
+    super('Pagamentos não configurados', 503)
+  }
+}

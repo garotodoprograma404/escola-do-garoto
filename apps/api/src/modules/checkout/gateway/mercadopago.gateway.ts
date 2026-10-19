@@ -15,7 +15,8 @@ const REQUEST_TIMEOUT_MS = 10_000
 export type MercadoPagoConfig = {
   accessToken: string
   webOrigin: string
-  apiPublicUrl: string
+  /** Endereço público do webhook (`https://dominio/api/payments/mercadopago/webhook`). */
+  notificationUrl: string
 }
 
 /**
@@ -127,10 +128,7 @@ export class MercadoPagoGateway extends PaymentGateway {
         failure: backUrl('failure'),
       },
       auto_return: 'approved',
-      notification_url: new URL(
-        '/api/payments/mercadopago/webhook',
-        this.config.apiPublicUrl,
-      ).toString(),
+      notification_url: this.config.notificationUrl,
       payment_methods: buildPaymentMethods(input.paymentMethods),
       expires: true,
       expiration_date_to: input.expiresAt.toISOString(),

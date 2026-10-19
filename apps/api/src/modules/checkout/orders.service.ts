@@ -19,7 +19,11 @@ import { ORDER_TTL_MS } from './checkout.constants.js'
 import type { ApplyCouponInput, CreateOrderInput } from './checkout.schemas.js'
 import { normalizeCommissionRate, splitAffiliate, splitRevenue } from './commission.js'
 import { CouponsService } from './coupons.service.js'
-import { PaymentGateway, PaymentGatewayError } from './gateway/payment-gateway.js'
+import {
+  PaymentGateway,
+  PaymentGatewayError,
+  PaymentsNotConfiguredError,
+} from './gateway/payment-gateway.js'
 import { centsToReais, dbToCents } from './money.js'
 import { fulfillOrder, loadItems, metadataOf, type OrderRow } from './order-fulfillment.js'
 import { HOLDING_ORDER_STATUSES, OPEN_ORDER_STATUSES } from './order-transition.js'
@@ -621,6 +625,11 @@ export class OrdersService {
           .set({ status: 'failed', providerStatus: 'checkout_unavailable', metadata })
           .where(eq(checkoutOrders.id, locked.id))
       })
+      if (error instanceof PaymentsNotConfiguredError) {
+        throw new ServiceUnavailableException(
+          'Os pagamentos ainda não foram configurados. Avise o administrador da plataforma.',
+        )
+      }
       throw new ServiceUnavailableException(
         'Não foi possível iniciar o pagamento agora. Tente de novo em instantes.',
       )

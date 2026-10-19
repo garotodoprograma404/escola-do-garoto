@@ -12,11 +12,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common'
 import { SkipThrottle } from '@nestjs/throttler'
-import { ENV } from '../../config/config.module.js'
-import type { Env } from '../../config/env.js'
 import { Public } from '../auth/decorators.js'
 import { PaymentGateway, PaymentGatewayError } from './gateway/payment-gateway.js'
 import { verifyMercadoPagoSignature } from './gateway/webhook-signature.js'
+import { PaymentCredentialsService } from './payment-credentials.service.js'
 import { PaymentsService } from './payments.service.js'
 
 const PAYMENT_ID = /^\d{1,20}$/
@@ -46,7 +45,7 @@ export class MercadoPagoWebhookController {
   private readonly recentlySeen = new Map<string, number>()
 
   constructor(
-    @Inject(ENV) private readonly env: Env,
+    @Inject(PaymentCredentialsService) private readonly credentials: PaymentCredentialsService,
     @Inject(PaymentGateway) private readonly gateway: PaymentGateway,
     @Inject(PaymentsService) private readonly payments: PaymentsService,
   ) {}
@@ -59,7 +58,8 @@ export class MercadoPagoWebhookController {
     @Headers('x-signature') signature: string | undefined,
     @Headers('x-request-id') requestId: string | undefined,
   ): Promise<{ received: true }> {
-    const secret = this.env.MERCADOPAGO_WEBHOOK_SECRET
+    // Assinatura secreta cadastrada no painel do admin (sem ela, nenhum webhook é aceito).
+    const secret = (await this.credentials.webhookSecret()) ?? undefined
     const valid =
       secret !== undefined &&
       verifyMercadoPagoSignature({

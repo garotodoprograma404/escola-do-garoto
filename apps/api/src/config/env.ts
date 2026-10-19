@@ -37,27 +37,21 @@ const envSchema = z
     INTERNAL_API_KEY: z.string().min(32).optional(),
     /** Pasta onde os arquivos enviados ficam (disco local). Em produção, um volume persistente. */
     FILES_DIR: z.string().min(1).default('./storage'),
-    /** Segredo das URLs assinadas (arquivos privados, ex.: certificados). `openssl rand -hex 32`. */
+    /**
+     * Segredo das URLs assinadas (arquivos privados, ex.: certificados) e base da chave que cifra as
+     * credenciais do Mercado Pago no banco (trocar este valor obriga a cadastrá-las de novo no
+     * painel). `openssl rand -hex 32`.
+     */
     FILES_SIGNING_SECRET: z.string().min(32).optional(),
 
     /**
-     * OBRIGATÓRIO, sem padrão: ligar o simulador (`fake`) é uma decisão explícita de quem roda o
-     * ambiente, nunca um efeito de esquecer a variável. `fake` = simulador local, para ver o fluxo
-     * sem conta no Mercado Pago (passa pelas mesmas validações). Proibido em produção.
-     */
-    PAYMENT_DRIVER: z.enum(['fake', 'mercadopago']),
-    MERCADOPAGO_ACCESS_TOKEN: z.string().min(10).optional(),
-    /** Chave secreta do webhook (painel "Suas integrações" → Webhooks). Valida o `x-signature`. */
-    MERCADOPAGO_WEBHOOK_SECRET: z.string().min(10).optional(),
-    /** Endereço PÚBLICO e https da API, para o Mercado Pago chamar o webhook. */
-    API_PUBLIC_URL: z.url().optional(),
-    /** Máximo de parcelas no cartão. */
-    PAYMENT_MAX_INSTALLMENTS: z.coerce.number().int().min(1).max(24).default(12),
-    /**
-     * Ambiente de DEMONSTRAÇÃO publicado (ex.: homologação atrás de senha). Liga, em produção, só
-     * duas exceções: pagamento pelo simulador (`PAYMENT_DRIVER=fake`, nada é cobrado) e e-mail no
-     * log (`MAIL_DRIVER=console`), com as contas novas já confirmadas. Todas as outras travas de
+     * Ambiente de DEMONSTRAÇÃO publicado. Em produção: pagamento sempre pelo simulador (nada é
+     * cobrado, mesmo com credenciais do Mercado Pago no painel) e e-mail no log
+     * (`MAIL_DRIVER=console`), com as contas novas já confirmadas. Todas as outras travas de
      * produção continuam valendo. Nunca ligue num site que vende de verdade.
+     *
+     * O Mercado Pago NÃO é configurado aqui: o admin cola as credenciais no painel (Configurações →
+     * Financeiro) e elas ficam cifradas no banco (ver `PaymentCredentialsService`).
      */
     DEMO_MODE: z.stringbool().default(false),
     /** Prefixo dos códigos de certificado (marca da plataforma): 2 a 8 letras maiúsculas. */
@@ -69,15 +63,6 @@ const envSchema = z
   .superRefine((env, ctx) => {
     const fail = (path: keyof typeof env, message: string) =>
       ctx.addIssue({ code: 'custom', path: [path], message })
-
-    // Com o Mercado Pago ligado (em qualquer ambiente) precisa de tudo para funcionar de verdade.
-    if (env.PAYMENT_DRIVER === 'mercadopago') {
-      if (!env.MERCADOPAGO_ACCESS_TOKEN)
-        fail('MERCADOPAGO_ACCESS_TOKEN', 'obrigatório com PAYMENT_DRIVER=mercadopago')
-      if (!env.MERCADOPAGO_WEBHOOK_SECRET)
-        fail('MERCADOPAGO_WEBHOOK_SECRET', 'obrigatório com PAYMENT_DRIVER=mercadopago')
-      if (!env.API_PUBLIC_URL) fail('API_PUBLIC_URL', 'obrigatório com PAYMENT_DRIVER=mercadopago')
-    }
 
     if (env.MAIL_DRIVER === 'smtp') {
       if (!env.SMTP_HOST) fail('SMTP_HOST', 'obrigatório com MAIL_DRIVER=smtp')
@@ -95,9 +80,6 @@ const envSchema = z
 
     if (env.NODE_ENV !== 'production') return
 
-    if (env.DEMO_MODE && env.PAYMENT_DRIVER !== 'fake') {
-      fail('PAYMENT_DRIVER', 'com DEMO_MODE o pagamento é sempre o simulador ("fake")')
-    }
     if (env.MAIL_DRIVER === 'console' && !env.DEMO_MODE) {
       fail('MAIL_DRIVER', 'não pode ser "console" em produção')
     }
@@ -112,19 +94,6 @@ const envSchema = z
       fail('WEB_ORIGIN', 'precisa ser https em produção')
     if (!env.INTERNAL_API_KEY) fail('INTERNAL_API_KEY', 'obrigatório em produção')
     if (!env.FILES_SIGNING_SECRET) fail('FILES_SIGNING_SECRET', 'obrigatório em produção')
-    if (env.DEMO_MODE) return
-
-    if (env.PAYMENT_DRIVER !== 'mercadopago')
-      fail('PAYMENT_DRIVER', 'em produção precisa ser "mercadopago"')
-    if (!env.MERCADOPAGO_ACCESS_TOKEN) fail('MERCADOPAGO_ACCESS_TOKEN', 'obrigatório em produção')
-    if (!env.MERCADOPAGO_WEBHOOK_SECRET)
-      fail('MERCADOPAGO_WEBHOOK_SECRET', 'obrigatório em produção')
-    if (!env.API_PUBLIC_URL || new URL(env.API_PUBLIC_URL).protocol !== 'https:') {
-      fail(
-        'API_PUBLIC_URL',
-        'obrigatório e https em produção (o Mercado Pago chama o webhook por ela)',
-      )
-    }
   })
   .transform((env) => ({
     ...env,

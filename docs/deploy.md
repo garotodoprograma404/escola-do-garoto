@@ -9,7 +9,7 @@ Tudo roda em quatro containers: **Caddy** (HTTPS e única porta aberta), **front
 | -------------------------- | ------------------------------------------------------------------------------------- |
 | Servidor Linux (2 GB+ RAM) | roda os containers; portas 80 e 443 liberadas                                         |
 | Domínio com DNS apontando  | o Caddy emite o HTTPS sozinho (Let's Encrypt); o cookie de sessão exige HTTPS         |
-| Conta no Mercado Pago      | token de **produção** e chave secreta do webhook (painel "Suas integrações")          |
+| Conta no Mercado Pago      | Access Token e assinatura do webhook, colados no **painel do admin** depois de subir  |
 | Servidor SMTP              | e-mail de confirmação de conta e de recuperação de senha (Resend, SES, Brevo, Gmail…) |
 
 Sem SMTP a API **não sobe** em produção (o driver `console` é proibido lá): ninguém receberia o link
@@ -29,15 +29,17 @@ docker compose -f infra/producao/compose.yaml --env-file infra/producao/.env up 
 Na subida a API aplica as migrations sozinha; se alguma falhar, o container não sobe (veja
 `docker compose ... logs api`). O primeiro build leva alguns minutos.
 
-1. **Webhook do Mercado Pago:** cadastre `https://SEU-DOMINIO/api/payments/mercadopago/webhook` e copie a
-   chave secreta para `MERCADOPAGO_WEBHOOK_SECRET`. Pagamentos de teste **não** disparam webhook: use o
-   simulador do painel.
-2. **Primeiro admin:** crie uma conta pelo site e depois conceda o papel no banco (uma vez):
+1. **Primeiro admin:** crie uma conta pelo site e depois conceda o papel no banco (uma vez):
    ```bash
    docker compose -f infra/producao/compose.yaml --env-file infra/producao/.env exec postgres \
      psql -U escola -d escola -c "INSERT INTO user_roles (user_id, role) SELECT id, 'admin' FROM users WHERE email = 'voce@exemplo.com'"
    ```
    Depois, tudo pelo painel admin (configurações, logo, categorias, cupons…).
+2. **Mercado Pago:** no painel do admin, em **Configurações → Financeiro**, siga o passo a passo da tela:
+   cole o **Access Token** (`APP_USR-`), cadastre no Mercado Pago a URL do webhook que a tela mostra (evento
+   "Pagamentos") e cole a **assinatura secreta**. O sistema confere o token na hora. Até isso ser feito, a
+   compra de cursos pagos fica desligada (os grátis funcionam). Pagamentos de teste **não** disparam
+   webhook: use o simulador do painel do Mercado Pago.
 3. **Teste de fumaça:** abra o site, cadastre-se (o e-mail de confirmação precisa chegar), faça login, compre um
    curso de valor baixo e veja a matrícula aparecer.
 

@@ -33,8 +33,8 @@ Checkout com Mercado Pago, cupons, financeiro do aluno e financeiro do admin. C�
   `features/public/cart/services/coupon-calculator.ts`, `features/student/financials/**`,
   `features/admin/coupons/**`, `features/admin/finance/**` e na página
   `app/(dashboard)/student/financials`. A rota `/api/payments/mercadopago/webhook` não existe no Next: o
-  `rewrites` manda direto para a API. A tela `/checkout/simulador?pedido=` (só desenvolvimento) serve ao
-  fluxo `PAYMENT_DRIVER=fake`.
+  `rewrites` manda direto para a API. A tela `/checkout/simulador?pedido=` serve ao
+  simulador (desenvolvimento sem credenciais e ambiente de demonstração).
 
 ## Regras de negócio
 
@@ -70,9 +70,18 @@ Checkout com Mercado Pago, cupons, financeiro do aluno e financeiro do admin. C�
 - **Dinheiro:** centavos inteiros em todo o service (`money.ts`, `commission.ts`); o `numeric(10,2)` do
   banco é convertido na borda (`dbToCents`/`centsToReais`). As respostas para as telas saem em **reais**
   (`number`).
-- **Gateway:** `PaymentGateway` é a porta; `MercadoPagoGateway` (produção), `FakeGateway`
-  (`PAYMENT_DRIVER=fake`, proibido em produção pelo `env.ts`) e `ScriptedGateway`. Métodos de
-  pagamento e parcelas vêm de `platform_settings` (`payment_*`), as mesmas chaves do admin.
+- **Gateway:** `PaymentGateway` é a porta; quem escolhe a implementação, a cada uso, é o
+  `DynamicPaymentGateway`: com `DEMO_MODE`, sempre o simulador (`FakeGateway`); com credenciais do Mercado
+  Pago cadastradas no painel, `MercadoPagoGateway`; sem credenciais, simulador fora de produção e
+  **desligado** em produção (o pedido pago é recusado com "pagamentos ainda não configurados" e o cupom
+  volta). Métodos de pagamento e parcelas vêm de `platform_settings` (`payment_*`), as mesmas chaves do admin.
+- **Credenciais do Mercado Pago no painel** (Configurações → Financeiro, rotas `GET/PUT/DELETE
+/api/admin/payment-gateway` e `POST /api/admin/payment-gateway/check`, só admin): Access Token e
+  assinatura secreta do webhook. Ao salvar, o token é conferido no Mercado Pago (`/users/me`) e
+  recusado se inválido. Ficam cifrados (AES-256-GCM, chave derivada do `FILES_SIGNING_SECRET`) na tabela
+  `payment_gateway_credentials` e nunca voltam para a tela: o painel vê a dica do token, a conta, se é de
+  teste ou de produção e a URL do webhook (montada a partir do `WEB_ORIGIN`). Trocar o
+  `FILES_SIGNING_SECRET` obriga a cadastrar de novo.
 - **Afiliado:** o servidor do Next repassa as chaves de rastreio (cookies `vox_affiliate_*`); a API resolve
   no banco o clique mais recente válido (`affiliate-attribution.service.ts`). O registro do clique (proxy)
   é da área de afiliados ([afiliados.md](afiliados.md)). Autoindicação (afiliado = comprador ou = produtor),

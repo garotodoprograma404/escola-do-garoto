@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common'
 import { ScheduleModule } from '@nestjs/schedule'
-import { ENV } from '../../config/config.module.js'
-import type { Env } from '../../config/env.js'
 import { AuthModule } from '../auth/auth.module.js'
 import { UsersModule } from '../users/users.module.js'
 import { AdminCouponsController } from './admin-coupons.controller.js'
@@ -12,11 +10,12 @@ import { CheckoutController } from './checkout.controller.js'
 import { CouponsService } from './coupons.service.js'
 import { DevPaymentsController } from './dev-payments.controller.js'
 import { FinalizeAccountService } from './finalize-account.service.js'
-import { FakeGateway } from './gateway/fake.gateway.js'
-import { MercadoPagoGateway } from './gateway/mercadopago.gateway.js'
+import { DynamicPaymentGateway } from './gateway/dynamic.gateway.js'
 import { PaymentGateway } from './gateway/payment-gateway.js'
 import { MercadoPagoWebhookController } from './mercadopago-webhook.controller.js'
 import { OrdersService } from './orders.service.js'
+import { PaymentCredentialsService } from './payment-credentials.service.js'
+import { AdminPaymentGatewayController } from './admin-payment-gateway.controller.js'
 import { PaymentSettingsService } from './payment-settings.service.js'
 import { PaymentsService } from './payments.service.js'
 
@@ -32,6 +31,7 @@ import { PaymentsService } from './payments.service.js'
     MercadoPagoWebhookController,
     DevPaymentsController,
     AdminCouponsController,
+    AdminPaymentGatewayController,
   ],
   providers: [
     OrdersService,
@@ -42,19 +42,11 @@ import { PaymentsService } from './payments.service.js'
     PaymentSettingsService,
     FinalizeAccountService,
     AdminCouponsService,
-    {
-      // O driver vem da configuração validada: `fake` só existe fora de produção (ver env.ts).
-      provide: PaymentGateway,
-      inject: [ENV],
-      useFactory: (env: Env): PaymentGateway =>
-        env.PAYMENT_DRIVER === 'mercadopago'
-          ? new MercadoPagoGateway({
-              accessToken: env.MERCADOPAGO_ACCESS_TOKEN!,
-              webOrigin: env.WEB_ORIGIN,
-              apiPublicUrl: env.API_PUBLIC_URL!,
-            })
-          : new FakeGateway(env.WEB_ORIGIN),
-    },
+    PaymentCredentialsService,
+    DynamicPaymentGateway,
+    // O resto do sistema só conhece a porta `PaymentGateway`; quem decide o gateway real é o
+    // `DynamicPaymentGateway`, pelo que o admin cadastrou no painel.
+    { provide: PaymentGateway, useExisting: DynamicPaymentGateway },
   ],
   exports: [PaymentsService, PaymentSettingsService],
 })

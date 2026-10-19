@@ -6,7 +6,12 @@ import { GeneralSettings } from '@/features/admin/settings/components/GeneralSet
 import { BrandingSettings } from '@/features/admin/settings/components/BrandingSettings.client'
 import { FinancialSettings } from '@/features/admin/settings/components/FinancialSettings.client'
 import { LegalSettings } from '@/features/admin/settings/components/LegalSettings.client'
-import type { SettingsSection, PlatformSettings } from '@/features/admin/settings/types'
+import { MercadoPagoSettings } from '@/features/admin/settings/components/MercadoPagoSettings.client'
+import type {
+  PaymentGatewayView,
+  SettingsSection,
+  PlatformSettings,
+} from '@/features/admin/settings/types'
 import type { BrandingSettings as BrandingSettingsType } from '@/features/admin/settings/actions/branding-actions'
 import { saveFinancialSettings } from '@/features/admin/settings/actions/financial-actions'
 import { saveGeneralSettings } from '@/features/admin/settings/actions/general-actions'
@@ -18,6 +23,7 @@ interface SettingsPageClientProps {
   generalSettings: PlatformSettings['general']
   financialSettings: PlatformSettings['financial']
   legalSettings: PlatformSettings['legal']
+  paymentGateway: PaymentGatewayView | null
 }
 
 export function SettingsPageClient({
@@ -25,6 +31,7 @@ export function SettingsPageClient({
   generalSettings,
   financialSettings,
   legalSettings,
+  paymentGateway,
 }: SettingsPageClientProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('general')
   const [currentGeneralSettings, setCurrentGeneralSettings] = useState(generalSettings)
@@ -117,7 +124,10 @@ export function SettingsPageClient({
           {activeSection === 'branding' && <BrandingSettings settings={brandingSettings} />}
 
           {activeSection === 'financial' && (
-            <FinancialSettings settings={currentFinancialSettings} onSave={handleSaveFinancial} />
+            <div className="space-y-6">
+              {paymentGateway ? <MercadoPagoSettings initial={paymentGateway} /> : null}
+              <FinancialSettings settings={currentFinancialSettings} onSave={handleSaveFinancial} />
+            </div>
           )}
 
           {activeSection === 'legal' && (

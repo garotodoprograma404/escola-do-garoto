@@ -79,7 +79,11 @@ proteções específicas de cada área estão em [`docs/areas/`](areas/README.md
 - Cupom reservado por atualização atômica, devolvido quando o pedido expira ou é cancelado; ordem de travas
   fixa (cupom antes do pedido) para evitar deadlock.
 - Erros do gateway nunca incluem token, corpo da resposta nem dado do pagador em mensagem, log ou evento.
-- O simulador de pagamento (`PAYMENT_DRIVER=fake`) é proibido em produção pelo `env.ts`.
+- O simulador de pagamento só liga fora de produção sem credenciais, ou com `DEMO_MODE` (ver
+  `DynamicPaymentGateway`); em produção sem credenciais, o checkout pago fica desligado.
+- Credenciais do Mercado Pago entram pelo painel do admin, são conferidas no Mercado Pago, ficam cifradas
+  no banco (AES-256-GCM, chave derivada do `FILES_SIGNING_SECRET`) e nunca voltam para a tela nem para o
+  log de auditoria.
 
 Detalhes em [areas/checkout.md](areas/checkout.md).
 
@@ -133,8 +137,7 @@ confirmação) nem com SMTP sem TLS.
 ## Configuração insegura não sobe
 
 Em produção a API recusa iniciar sem: `WEB_ORIGIN` https, `INTERNAL_API_KEY`, `FILES_SIGNING_SECRET`,
-`PAYMENT_DRIVER=mercadopago` com token, chave do webhook e `API_PUBLIC_URL` https, limite de tentativas
-ligado e e-mail por SMTP com TLS. `NODE_ENV` é obrigatório (sem padrão), porque liga essas travas.
+limite de tentativas ligado e e-mail por SMTP com TLS. `NODE_ENV` é obrigatório (sem padrão), porque liga essas travas.
 
 ## Limitações conhecidas
 

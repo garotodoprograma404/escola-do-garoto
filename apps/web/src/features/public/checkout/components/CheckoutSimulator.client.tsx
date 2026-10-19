@@ -19,7 +19,7 @@ interface CheckoutSimulatorProps {
 }
 
 /**
- * Simulador de pagamento, SÓ para desenvolvimento (`PAYMENT_DRIVER=fake` na API). Faz o mesmo
+ * Simulador de pagamento: desenvolvimento sem credenciais do Mercado Pago e ambiente de demonstração. Faz o mesmo
  * caminho do webhook do Mercado Pago, com valor, moeda e referência conferidos pela API.
  */
 export function CheckoutSimulator({ orderId }: CheckoutSimulatorProps) {

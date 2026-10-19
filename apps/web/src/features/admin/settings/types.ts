@@ -79,3 +79,17 @@ export interface PlatformSettings {
 }
 
 export type SettingsSection = 'general' | 'branding' | 'financial' | 'legal'
+
+/** Situação do Mercado Pago no painel (`GET /api/admin/payment-gateway`). Nunca traz o segredo. */
+export interface PaymentGatewayView {
+  provider: 'mercadopago'
+  configured: boolean
+  live: boolean | null
+  tokenHint: string | null
+  webhookSecretConfigured: boolean
+  accountLabel: string | null
+  verifiedAt: string | null
+  updatedAt: string | null
+  webhookUrl: string
+  demoMode: boolean
+}

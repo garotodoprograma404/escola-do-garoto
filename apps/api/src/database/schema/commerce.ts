@@ -452,3 +452,27 @@ export const withdrawals = pgTable(
     ),
   ],
 )
+
+/**
+ * Credenciais do meio de pagamento, cadastradas pelo admin no painel (nada no `.env`). Uma linha
+ * por provedor; os segredos ficam CIFRADOS (`common/crypto/secret-box.ts`) e nunca voltam para a
+ * tela: o painel vê só a dica (`token_hint`), a conta e se é de teste ou de produção.
+ */
+export const paymentGatewayCredentials = pgTable('payment_gateway_credentials', {
+  id: bigint({ mode: 'number' })
+    .primaryKey()
+    .generatedAlwaysAsIdentity({ name: 'payment_gateway_credentials_id_seq' }),
+  provider: text().notNull().unique(),
+  accessTokenSealed: text('access_token_sealed').notNull(),
+  webhookSecretSealed: text('webhook_secret_sealed'),
+  /** Começo e fim do token (ex.: `APP_USR-…a1b2`), para o admin reconhecer qual está salvo. */
+  tokenHint: text('token_hint').notNull(),
+  /** Credencial de produção (`APP_USR-`) ou de teste (`TEST-`). */
+  live: boolean().notNull(),
+  /** Conta que o Mercado Pago devolveu ao conferir o token (apelido ou e-mail). */
+  accountLabel: text('account_label'),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})
