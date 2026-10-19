@@ -5,10 +5,11 @@ import {
   getFinancialMetrics,
   getWithdrawalRequests,
   getTransactions,
+  getRefundRequests,
 } from '@/features/admin/finance/services/financeService'
 
 async function FinanceContent() {
-  const [metrics, withdrawals, transactions] = await Promise.all([
+  const [metrics, withdrawals, transactions, refunds] = await Promise.all([
     getFinancialMetrics(),
     getWithdrawalRequests({
       searchTerm: '',
@@ -18,6 +19,7 @@ async function FinanceContent() {
       producerId: 'ALL',
     }),
     getTransactions(),
+    getRefundRequests(),
   ])
 
   return (
@@ -25,6 +27,7 @@ async function FinanceContent() {
       metrics={metrics}
       withdrawals={withdrawals}
       transactions={transactions}
+      refunds={refunds}
     />
   )
 }
@@ -55,7 +58,7 @@ export default function AdminFinancePage() {
             Gestão Financeira
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Monitore métricas, aprove saques e gerencie o fluxo de caixa da plataforma.
+            Monitore métricas, aprove saques e reembolsos e gerencie o fluxo de caixa da plataforma.
           </p>
         </div>
         <ReportExportButton />

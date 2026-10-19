@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   StudentFinancialSummary,
   PurchaseHistory,
@@ -19,39 +19,46 @@ interface StudentFinancialsContentProps {
   stats: FinancialStatsType
 }
 
-export function StudentFinancialsContent({ transactions, stats }: StudentFinancialsContentProps) {
-  const [filteredTransactions, setFilteredTransactions] = useState(transactions)
-  const { toast } = useToast()
+function applyFilters(transactions: StudentTransaction[], filters: PurchaseHistoryFilters | null) {
+  // O pedido de reembolso aparece na própria compra (andamento), não como linha separada.
+  let filtered = transactions.filter((t) => t.type === 'purchase')
+  if (!filters) return filtered
 
-  const handleFilterChange = (filters: PurchaseHistoryFilters) => {
-    let filtered = [...transactions]
-
-    // Filtro de busca
-    if (filters.searchTerm) {
-      const term = filters.searchTerm.toLowerCase()
-      filtered = filtered.filter(
-        (t) =>
-          t.course_title.toLowerCase().includes(term) ||
-          t.id.toLowerCase().includes(term) ||
-          t.producer_name.toLowerCase().includes(term),
-      )
-    }
-
-    // Filtro de ano
-    if (filters.year && filters.year !== 'all') {
-      filtered = filtered.filter((t) => {
-        const year = new Date(t.created_at).getFullYear().toString()
-        return year === filters.year
-      })
-    }
-
-    // Filtro de status
-    if (filters.status && filters.status !== 'all') {
-      filtered = filtered.filter((t) => t.status === filters.status)
-    }
-
-    setFilteredTransactions(filtered)
+  // Filtro de busca
+  if (filters.searchTerm) {
+    const term = filters.searchTerm.toLowerCase()
+    filtered = filtered.filter(
+      (t) =>
+        t.course_title.toLowerCase().includes(term) ||
+        t.id.toLowerCase().includes(term) ||
+        t.producer_name.toLowerCase().includes(term),
+    )
   }
+
+  // Filtro de ano
+  if (filters.year && filters.year !== 'all') {
+    filtered = filtered.filter((t) => {
+      const year = new Date(t.created_at).getFullYear().toString()
+      return year === filters.year
+    })
+  }
+
+  // Filtro de status
+  if (filters.status && filters.status !== 'all') {
+    filtered = filtered.filter((t) => t.status === filters.status)
+  }
+
+  return filtered
+}
+
+export function StudentFinancialsContent({ transactions, stats }: StudentFinancialsContentProps) {
+  const [filters, setFilters] = useState<PurchaseHistoryFilters | null>(null)
+  // Derivado das props: depois de pedir reembolso, `router.refresh()` traz a lista nova.
+  const filteredTransactions = useMemo(
+    () => applyFilters(transactions, filters),
+    [transactions, filters],
+  )
+  const { toast } = useToast()
 
   const handleDownloadInvoice = async (transactionId: string) => {
     try {
@@ -90,7 +97,7 @@ export function StudentFinancialsContent({ transactions, stats }: StudentFinanci
     <div className="space-y-5 sm:space-y-8">
       <StudentFinancialSummary stats={stats} />
 
-      <PurchaseFilters onFilterChange={handleFilterChange} />
+      <PurchaseFilters onFilterChange={setFilters} />
 
       <PurchaseHistory
         transactions={filteredTransactions}

@@ -8,6 +8,7 @@ import {
   transactions,
   withdrawals,
 } from '../../../database/schema/index.js'
+import { producerMoneyOnly } from '../financials/financials.service.js'
 import { fromCents, toCents } from '../money.js'
 
 export type DashboardStats = {
@@ -81,6 +82,7 @@ export class DashboardService {
       .where(
         and(
           eq(transactions.userId, producerId),
+          producerMoneyOnly(),
           inArray(transactions.type, ['sale', 'refund', 'commission', 'affiliate_commission']),
         ),
       )
@@ -131,6 +133,7 @@ export class DashboardService {
       .where(
         and(
           eq(transactions.userId, producerId),
+          producerMoneyOnly(),
           eq(transactions.type, 'sale'),
           eq(transactions.status, 'completed'),
           sql`${transactions.createdAt} >= now() - interval '30 days'`,
@@ -167,7 +170,13 @@ export class DashboardService {
         ),
       )
       .leftJoin(profiles, and(eq(profiles.id, enrollments.studentId), isNotNull(courses.id)))
-      .where(and(eq(transactions.userId, producerId), eq(transactions.type, 'sale')))
+      .where(
+        and(
+          eq(transactions.userId, producerId),
+          eq(transactions.type, 'sale'),
+          producerMoneyOnly(),
+        ),
+      )
       .orderBy(desc(transactions.createdAt), desc(transactions.id))
       .limit(5)
 
@@ -207,6 +216,7 @@ export class DashboardService {
       .where(
         and(
           eq(transactions.userId, producerId),
+          producerMoneyOnly(),
           eq(transactions.type, 'sale'),
           eq(transactions.status, 'completed'),
           inArray(transactions.courseId, ids),

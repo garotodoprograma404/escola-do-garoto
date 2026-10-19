@@ -10,6 +10,7 @@ import {
   type CreateCheckoutInput,
   type CreatedCheckout,
   type GatewayPayment,
+  type RefundPaymentInput,
 } from './payment-gateway.js'
 
 export type PaymentMode = 'mercadopago' | 'simulator' | 'disabled'
@@ -55,6 +56,14 @@ export class DynamicPaymentGateway extends PaymentGateway {
 
   findPaymentsByReference(orderId: string): Promise<GatewayPayment[]> {
     return this.current().then((gateway) => gateway.findPaymentsByReference(orderId))
+  }
+
+  override async simulatesPayments(): Promise<boolean> {
+    return (await this.mode()) === 'simulator'
+  }
+
+  refundPayment(input: RefundPaymentInput): Promise<void> {
+    return this.current().then((gateway) => gateway.refundPayment(input))
   }
 
   private async current(): Promise<PaymentGateway> {

@@ -5,6 +5,7 @@
 // que as telas já usam.
 import { apiServer } from '@/lib/server-api'
 import type {
+  AdminRefundRequest,
   FinancialMetrics,
   WithdrawalRequest,
   Transaction,
@@ -46,6 +47,18 @@ export async function getWithdrawalRequests(filters: FinanceFilters): Promise<Wi
   if (!result.ok) {
     console.error('Error fetching withdrawal requests:', result.error.message)
     throw new Error('Erro ao buscar solicitações de saque')
+  }
+  return result.data
+}
+
+/** Pedidos de reembolso (os em aberto primeiro). Em erro, lista vazia: o resto da tela continua. */
+export async function getRefundRequests(): Promise<AdminRefundRequest[]> {
+  const result = await apiServer<AdminRefundRequest[]>('/admin/finance/refunds', {
+    query: { status: 'all' },
+  })
+  if (!result.ok) {
+    console.error('Error fetching refund requests:', result.error.message)
+    return []
   }
   return result.data
 }

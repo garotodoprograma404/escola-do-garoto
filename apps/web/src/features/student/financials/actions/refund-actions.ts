@@ -6,12 +6,16 @@ import { apiServer } from '@/lib/server-api'
 
 const refundSchema = z.object({
   transaction_id: z.string().regex(/^\d{1,15}$/, 'Transação inválida'),
-  reason: z.string().min(10, 'Motivo deve ter pelo menos 10 caracteres'),
+  reason: z
+    .string()
+    .trim()
+    .min(10, 'Motivo deve ter pelo menos 10 caracteres')
+    .max(1000, 'Motivo longo demais'),
 })
 
 /**
- * Pede reembolso de uma compra (janela de 30 dias, um pedido por compra). Chamador fino da API,
- * que confere o dono da compra, o prazo e a duplicidade.
+ * Pede reembolso de uma compra (até 7 dias depois dela, um pedido por compra). Chamador fino da
+ * API, que confere o dono da compra, o prazo e a duplicidade.
  */
 export async function requestRefund(formData: FormData) {
   try {

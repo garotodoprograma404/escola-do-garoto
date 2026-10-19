@@ -5,6 +5,7 @@ import { HealthMetricsPanel } from './HealthMetricsPanel'
 import { WithdrawalListTable } from './WithdrawalListTable'
 import { WithdrawalAuditDrawer } from './WithdrawalAuditDrawer'
 import { TransactionHistoryTable } from './TransactionHistoryTable'
+import { RefundRequestsPanel } from './RefundRequestsPanel.client'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
 import {
   approveWithdrawalAction,
@@ -12,18 +13,20 @@ import {
   rejectWithdrawalAction,
 } from '../actions/withdrawal-actions'
 import { useToast } from '@/shared/hooks/use-toast'
-import type { FinancialMetrics, WithdrawalRequest, Transaction } from '../types'
+import type { AdminRefundRequest, FinancialMetrics, WithdrawalRequest, Transaction } from '../types'
 
 interface FinanceManagementContentProps {
   metrics: FinancialMetrics
   withdrawals: WithdrawalRequest[]
   transactions: Transaction[]
+  refunds: AdminRefundRequest[]
 }
 
 export function FinanceManagementContent({
   metrics,
   withdrawals,
   transactions,
+  refunds,
 }: FinanceManagementContentProps) {
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -86,6 +89,9 @@ export function FinanceManagementContent({
   }
 
   const pendingCount = withdrawals.filter((w) => w.status === 'pending').length
+  const openRefunds = refunds.filter(
+    (r) => r.stage === 'requested' || r.stage === 'approved',
+  ).length
 
   return (
     <div className="space-y-8">
@@ -93,7 +99,7 @@ export function FinanceManagementContent({
 
       <Tabs defaultValue="withdrawals" className="space-y-4">
         <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-800">
-          <TabsList className="bg-transparent">
+          <TabsList className="h-auto bg-transparent">
             <TabsTrigger
               value="withdrawals"
               className="border-b-2 px-3 py-4 text-sm font-medium transition-colors hover:text-slate-700 data-[state=active]:border-brand-500 data-[state=inactive]:border-transparent data-[state=active]:text-brand-600 data-[state=inactive]:text-slate-500 dark:hover:text-slate-200 dark:data-[state=active]:text-brand-400 dark:data-[state=inactive]:text-slate-400 sm:px-6"
@@ -103,6 +109,19 @@ export function FinanceManagementContent({
                 {pendingCount > 0 && (
                   <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">
                     {pendingCount}
+                  </span>
+                )}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="refunds"
+              className="border-b-2 px-3 py-4 text-sm font-medium transition-colors hover:text-slate-700 data-[state=active]:border-brand-500 data-[state=inactive]:border-transparent data-[state=active]:text-brand-600 data-[state=inactive]:text-slate-500 dark:hover:text-slate-200 dark:data-[state=active]:text-brand-400 dark:data-[state=inactive]:text-slate-400 sm:px-6"
+            >
+              <span className="flex items-center gap-2">
+                Reembolsos
+                {openRefunds > 0 && (
+                  <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">
+                    {openRefunds}
                   </span>
                 )}
               </span>
@@ -118,6 +137,10 @@ export function FinanceManagementContent({
 
         <TabsContent value="withdrawals">
           <WithdrawalListTable withdrawals={withdrawals} onView={handleView} />
+        </TabsContent>
+
+        <TabsContent value="refunds">
+          <RefundRequestsPanel refunds={refunds} />
         </TabsContent>
 
         <TabsContent value="transactions">

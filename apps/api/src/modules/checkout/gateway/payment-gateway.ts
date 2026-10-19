@@ -35,6 +35,12 @@ export type CreateCheckoutInput = {
 
 export type CreatedCheckout = { preferenceId: string; checkoutUrl: string }
 
+export type RefundPaymentInput = {
+  paymentId: string
+  /** Mesma chave = mesmo estorno: repetir o pedido (clique duplo, nova tentativa) não estorna 2x. */
+  idempotencyKey: string
+}
+
 /** O gateway respondeu com erro (ou ficou fora do ar). Nunca carrega token nem dados do pagador. */
 export class PaymentGatewayError extends Error {
   constructor(
@@ -60,6 +66,15 @@ export abstract class PaymentGateway {
   abstract closeCheckout(preferenceId: string): Promise<void>
   /** Pagamentos ligados a um pedido (mais recentes primeiro). Usado para sincronizar sem webhook. */
   abstract findPaymentsByReference(orderId: string): Promise<GatewayPayment[]>
+  /**
+   * Pede o estorno TOTAL do pagamento. A confirmação chega depois pelo próprio pagamento (status
+   * `refunded`), que entra por `PaymentsService.applyPayment` como qualquer outro.
+   */
+  abstract refundPayment(input: RefundPaymentInput): Promise<void>
+  /** `true` só no simulador: as compras `fake-…` não movem dinheiro e podem ser "estornadas" direto. */
+  async simulatesPayments(): Promise<boolean> {
+    return false
+  }
 }
 
 /** Produção sem credenciais do Mercado Pago cadastradas no painel: não há como cobrar. */

@@ -19,6 +19,16 @@ export const refundRequestSchema = z.object({
 })
 export type RefundRequestInput = z.infer<typeof refundRequestSchema>
 
+export const refundFiltersSchema = z.object({
+  status: z.enum(['open', 'all', 'requested', 'approved', 'completed', 'rejected']).default('open'),
+})
+export type RefundFilters = z.infer<typeof refundFiltersSchema>
+
+export const rejectRefundSchema = z.object({
+  reason: z.string().trim().min(10, 'O motivo deve ter pelo menos 10 caracteres').max(500),
+})
+export type RejectRefundInput = z.infer<typeof rejectRefundSchema>
+
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida')
 
 export const withdrawalFiltersSchema = z.object({

@@ -17,6 +17,8 @@ import {
 } from '@/shared/components/ui/table'
 import { Download, CheckCircle } from 'lucide-react'
 import type { StudentTransaction } from '../types'
+import { RefundButton } from './RefundButton.client'
+import { RefundStatus } from './RefundStatus'
 
 interface PurchaseHistoryProps {
   transactions: StudentTransaction[]
@@ -124,6 +126,7 @@ export function PurchaseHistory({ transactions, onDownloadInvoice }: PurchaseHis
                   </Button>
                 )}
               </div>
+              <RefundArea transaction={transaction} />
             </div>
           ))}
         </div>
@@ -137,7 +140,7 @@ export function PurchaseHistory({ transactions, onDownloadInvoice }: PurchaseHis
                 <TableHead>Valor</TableHead>
                 <TableHead>Pagamento</TableHead>
                 <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Nota Fiscal</TableHead>
+                <TableHead className="text-right">Comprovante e reembolso</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -183,18 +186,21 @@ export function PurchaseHistory({ transactions, onDownloadInvoice }: PurchaseHis
                     </div>
                   </TableCell>
 
-                  {/* Invoice */}
+                  {/* Comprovante e reembolso */}
                   <TableCell className="text-right">
-                    {transaction.status === 'completed' && onDownloadInvoice && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDownloadInvoice(transaction.id)}
-                        className="ml-auto flex items-center justify-end gap-1 text-xs font-bold text-brand-600 hover:text-brand-500 dark:text-brand-400"
-                      >
-                        <Download size={14} /> Baixar PDF
-                      </Button>
-                    )}
+                    <div className="flex flex-col items-end gap-2">
+                      {transaction.status === 'completed' && onDownloadInvoice && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDownloadInvoice(transaction.id)}
+                          className="flex items-center justify-end gap-1 text-xs font-bold text-brand-600 hover:text-brand-500 dark:text-brand-400"
+                        >
+                          <Download size={14} /> Baixar PDF
+                        </Button>
+                      )}
+                      <RefundArea transaction={transaction} />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -203,5 +209,18 @@ export function PurchaseHistory({ transactions, onDownloadInvoice }: PurchaseHis
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+/** Botão de pedir reembolso (dentro do prazo) ou o andamento do pedido já feito. */
+function RefundArea({ transaction }: { transaction: StudentTransaction }) {
+  if (transaction.refund_request) return <RefundStatus request={transaction.refund_request} />
+  if (!transaction.refund_deadline) return null
+  return (
+    <RefundButton
+      transactionId={transaction.id}
+      courseTitle={transaction.course_title}
+      deadline={transaction.refund_deadline}
+    />
   )
 }

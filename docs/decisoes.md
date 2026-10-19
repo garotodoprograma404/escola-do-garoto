@@ -151,3 +151,12 @@ nunca voltam para a tela nem para o log de auditoria.
 
 Ainda não conferido com uma conta real do Mercado Pago de ponta a ponta (a conferência do token no
 painel já fala com a API do Mercado Pago).
+
+## Reembolso aprovado no painel, estorno pelo próprio pagamento
+
+O admin aprova ou recusa o pedido do aluno na aba Reembolsos do Financeiro. Aprovar pede o estorno total
+ao Mercado Pago pela API (com chave de idempotência por pedido de reembolso), mas **não mexe no pedido**:
+quem tira o acesso, revoga o certificado e desconta produtor e afiliado é o pagamento estornado, pelo mesmo
+`applyPayment` do webhook. Assim existe um caminho só para estorno (pelo painel da plataforma, pelo painel
+do Mercado Pago ou por chargeback). O prazo para pedir é de **7 dias**, igual à política de reembolso
+publicada e ao direito de arrependimento (CDC, art. 49). Estorno parcial fica de fora.

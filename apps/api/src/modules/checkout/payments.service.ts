@@ -1,8 +1,22 @@
-import { Inject, Injectable, Logger } from '@nestjs/common'
+import {
+  BadGatewayException,
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common'
 import { and, eq, inArray } from 'drizzle-orm'
 import { DB, type Database, type DbExecutor } from '../../database/database.module.js'
 import { checkoutOrders, enrollments, paymentEvents } from '../../database/schema/index.js'
-import { PaymentGateway, type GatewayPayment } from './gateway/payment-gateway.js'
+import { NotificationsService } from '../notifications/notifications.service.js'
+import {
+  PaymentGateway,
+  PaymentGatewayError,
+  PaymentsNotConfiguredError,
+  type GatewayPayment,
+} from './gateway/payment-gateway.js'
 import { CouponsService } from './coupons.service.js'
 import { dbToCents } from './money.js'
 import {
@@ -20,7 +34,12 @@ import {
   type OrderStatus,
 } from './order-transition.js'
 
-export type PaymentSource = 'webhook' | 'sync' | 'simulator'
+export type PaymentSource = 'webhook' | 'sync' | 'simulator' | 'refund'
+
+/** `refunded`: estorno confirmado e aplicado. `awaiting_confirmation`: pedido, o webhook conclui. */
+export type RefundOrderResult = 'refunded' | 'awaiting_confirmation'
+
+const REFUNDED_STATUSES = new Set(['refunded', 'charged_back'])
 
 export type ApplyOutcome =
   | 'applied' // o pedido mudou de estado
@@ -46,7 +65,118 @@ export class PaymentsService {
     @Inject(DB) private readonly db: Database,
     @Inject(CouponsService) private readonly couponsService: CouponsService,
     @Inject(PaymentGateway) private readonly gateway: PaymentGateway,
+    @Inject(NotificationsService) private readonly notifications: NotificationsService,
   ) {}
+
+  /**
+   * Estorno TOTAL do pagamento que liquidou o pedido (reembolso aprovado pelo admin).
+   *
+   * - Compra feita no simulador (`fake-…`, desenvolvimento e demonstração): o estorno é simulado e
+   *   aplicado na hora, pelo mesmo `applyPayment`.
+   * - Mercado Pago: pede o estorno pela API (com chave de idempotência) e reconsulta o pagamento. Se
+   *   ele já consta como estornado, aplica; se não, o webhook conclui quando o Mercado Pago confirmar.
+   *
+   * O pedido só muda por `applyPayment`: o que tira o acesso e as comissões é o pagamento estornado.
+   * `requestKey` identifica o pedido de reembolso; a chave enviada ao gateway leva também o id do
+   * pagamento (banco recriado ou outro ambiente na mesma conta nunca reaproveitam um estorno antigo).
+   */
+  async refundOrder(orderId: number, requestKey: string): Promise<RefundOrderResult> {
+    const order = await this.loadRefundableOrder(orderId)
+    if (order.status === 'refunded') return 'refunded'
+    const paymentId = order.paymentId!
+
+    if (paymentId.startsWith('fake-')) {
+      await this.applyPayment(
+        {
+          id: paymentId,
+          status: 'refunded',
+          statusDetail: 'simulated',
+          amountCents: dbToCents(order.totalAmount),
+          currency: 'BRL',
+          externalReference: order.externalReference,
+          paymentTypeId: null,
+          lastUpdated: new Date().toISOString(),
+        },
+        'simulator',
+      )
+      return (await this.loadRefundableOrder(orderId)).status === 'refunded'
+        ? 'refunded'
+        : 'awaiting_confirmation'
+    }
+
+    try {
+      await this.gateway.refundPayment({
+        paymentId,
+        idempotencyKey: `${requestKey}:${paymentId}`,
+      })
+    } catch (error) {
+      // Já estornado (ex.: pelo painel do Mercado Pago): segue para aplicar. Senão, avisa o admin.
+      const current = await this.gateway.getPayment(paymentId).catch(() => null)
+      if (!current || !REFUNDED_STATUSES.has(current.status)) throw this.refundError(error)
+    }
+
+    const payment = await this.gateway.getPayment(paymentId).catch(() => null)
+    if (payment && REFUNDED_STATUSES.has(payment.status)) {
+      await this.applyPayment(payment, 'refund')
+    }
+    return (await this.loadRefundableOrder(orderId)).status === 'refunded'
+      ? 'refunded'
+      : 'awaiting_confirmation'
+  }
+
+  /** Confere, sem mexer em nada, se o pedido pode ser estornado (lança o motivo se não puder). */
+  async assertRefundable(orderId: number): Promise<void> {
+    const order = await this.loadRefundableOrder(orderId)
+    if (order.status === 'refunded') throw new BadRequestException('Este pedido já foi estornado')
+  }
+
+  private async loadRefundableOrder(orderId: number) {
+    const [order] = await this.db
+      .select({
+        status: checkoutOrders.status,
+        paymentId: checkoutOrders.paymentId,
+        externalReference: checkoutOrders.externalReference,
+        totalAmount: checkoutOrders.totalAmount,
+      })
+      .from(checkoutOrders)
+      .where(eq(checkoutOrders.id, orderId))
+    if (!order) throw new NotFoundException('Pedido não encontrado')
+    if (order.status === 'refunded') return order
+    if (order.status !== 'approved') {
+      throw new BadRequestException('Só um pedido pago pode ser estornado')
+    }
+    if (!order.paymentId || !/^(fake-[\w-]+|\d{1,20})$/.test(order.paymentId)) {
+      throw new BadRequestException(
+        'Esta compra não tem pagamento no Mercado Pago para estornar. Devolva o valor por fora e recuse o pedido explicando.',
+      )
+    }
+    // Compra do simulador fora do modo simulador (ex.: banco que veio da demonstração): não houve
+    // dinheiro, então nada é "estornado" nem o aluno é avisado de uma devolução que não existe.
+    if (order.paymentId.startsWith('fake-') && !(await this.gateway.simulatesPayments())) {
+      throw new BadRequestException(
+        'Esta compra foi feita no simulador de pagamento: não houve cobrança para estornar. Recuse o pedido explicando.',
+      )
+    }
+    return order
+  }
+
+  /** Erro do gateway para o admin, sem detalhe técnico (nunca token nem dado do pagador). */
+  private refundError(error: unknown) {
+    if (error instanceof PaymentsNotConfiguredError) {
+      return new ServiceUnavailableException(
+        'O Mercado Pago não está configurado. Conecte a conta em Configurações → Financeiro.',
+      )
+    }
+    if (error instanceof PaymentGatewayError) {
+      this.logger.warn(`Estorno recusado pelo gateway: ${error.message}`)
+      return new BadGatewayException(
+        error.httpStatus === 409
+          ? error.message
+          : 'O Mercado Pago não aceitou o estorno agora. Confira o saldo da conta e tente de novo.',
+      )
+    }
+    return error
+  }
 
   /**
    * Aplica ao pedido o estado de um pagamento JÁ CONSULTADO no gateway (nunca o corpo cru de uma
@@ -246,12 +376,28 @@ export class PaymentsService {
     }
 
     if (next === 'refunded') {
-      // Estorno/chargeback: o acesso dado por esta compra acaba.
-      await revokeOrderAccess(tx, order)
+      // Estorno/chargeback: o acesso dado por esta compra acaba (e o certificado dela).
+      const { revokedCourseIds } = await revokeOrderAccess(tx, order)
       await tx
         .update(checkoutOrders)
         .set({ ...common, metadata: { ...metadata, refunded_at: new Date().toISOString() } })
         .where(eq(checkoutOrders.id, order.id))
+      if (order.userId) {
+        await this.notifications.create(
+          {
+            userId: order.userId,
+            type: payment.status === 'charged_back' ? 'order_charged_back' : 'order_refunded',
+            title: 'Compra estornada',
+            message:
+              revokedCourseIds.length > 0
+                ? 'O valor da compra foi estornado e volta pelo mesmo meio de pagamento. O acesso ao curso foi encerrado.'
+                : 'O valor da compra foi estornado e volta pelo mesmo meio de pagamento.',
+            link: '/student/financials',
+            metadata: { orderId: order.publicId },
+          },
+          tx,
+        )
+      }
       return 'applied'
     }
 

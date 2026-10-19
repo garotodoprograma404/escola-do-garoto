@@ -1,5 +1,6 @@
 import {
   PaymentGateway,
+  PaymentGatewayError,
   type CreateCheckoutInput,
   type CreatedCheckout,
   type GatewayPayment,
@@ -24,11 +25,26 @@ export class FakeGateway extends PaymentGateway {
 
   async closeCheckout(): Promise<void> {}
 
+  override async simulatesPayments(): Promise<boolean> {
+    return true
+  }
+
   async getPayment(): Promise<GatewayPayment | null> {
     return null
   }
 
   async findPaymentsByReference(): Promise<GatewayPayment[]> {
     return []
+  }
+
+  /**
+   * Compra feita no simulador é estornada direto por `PaymentsService.refundOrder` (não há dinheiro
+   * de verdade). Chegar aqui é um pagamento REAL do Mercado Pago sem a conta conectada.
+   */
+  async refundPayment(): Promise<void> {
+    throw new PaymentGatewayError(
+      'Este pagamento é do Mercado Pago, mas a conta não está conectada no painel',
+      409,
+    )
   }
 }

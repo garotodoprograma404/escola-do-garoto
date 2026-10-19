@@ -7,6 +7,7 @@ import {
   type CreateCheckoutInput,
   type CreatedCheckout,
   type GatewayPayment,
+  type RefundPaymentInput,
 } from './payment-gateway.js'
 
 const API_BASE = 'https://api.mercadopago.com'
@@ -176,11 +177,26 @@ export class MercadoPagoGateway extends PaymentGateway {
     })
   }
 
+  async refundPayment(input: RefundPaymentInput): Promise<void> {
+    if (!/^\d{1,20}$/.test(input.paymentId)) {
+      throw new PaymentGatewayError('Pagamento sem id do Mercado Pago')
+    }
+    // Corpo vazio = estorno do valor total.
+    await this.request(
+      'POST',
+      `/v1/payments/${input.paymentId}/refunds`,
+      {},
+      {
+        idempotencyKey: input.idempotencyKey,
+      },
+    )
+  }
+
   private async request(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
     body?: unknown,
-    options: { allow404?: boolean } = {},
+    options: { allow404?: boolean; idempotencyKey?: string } = {},
   ): Promise<unknown> {
     let response: Response
     try {
@@ -189,6 +205,7 @@ export class MercadoPagoGateway extends PaymentGateway {
         headers: {
           Authorization: `Bearer ${this.config.accessToken}`,
           'Content-Type': 'application/json',
+          ...(options.idempotencyKey ? { 'X-Idempotency-Key': options.idempotencyKey } : {}),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

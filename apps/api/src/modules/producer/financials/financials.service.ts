@@ -11,6 +11,18 @@ import {
 import { fromCents, toCents } from '../money.js'
 import { computeProducerBalance, type ProducerBalanceCents } from './balance.js'
 
+/**
+ * Só o dinheiro do produtor COMO PRODUTOR. Ele também pode comprar cursos como aluno: a linha da
+ * compra (`student_checkout`) e o pedido de reembolso dela são do bolso de aluno e nunca entram no
+ * saldo, senão a própria compra viraria saldo sacável (e o reembolso, desconto em dobro).
+ */
+export function producerMoneyOnly(): SQL {
+  return sql`not (
+    coalesce(${transactions.metadata}->>'source', '') = 'student_checkout'
+    or (${transactions.type} = 'refund' and coalesce(${transactions.metadata}, '{}'::jsonb) ? 'original_transaction_id')
+  )`
+}
+
 export const FINANCIAL_DATE_RANGES = ['7d', '30d', '90d', 'all'] as const
 export const FINANCIAL_TYPES = ['all', 'sale', 'withdrawal', 'refund', 'commission'] as const
 export type FinancialDateRange = (typeof FINANCIAL_DATE_RANGES)[number]
@@ -100,7 +112,7 @@ export async function loadProducerBalance(
       commissions: sql<number>`(count(*) filter (where ${transactions.type} in ('commission', 'affiliate_commission')))::int`,
     })
     .from(transactions)
-    .where(eq(transactions.userId, producerId))
+    .where(and(eq(transactions.userId, producerId), producerMoneyOnly()))
 
   const [saques] = await executor
     .select({
@@ -176,6 +188,7 @@ export class FinancialsService {
       .where(
         and(
           eq(transactions.userId, producerId),
+          producerMoneyOnly(),
           startDate ? gte(transactions.createdAt, startDate) : undefined,
           this.typeFilter(type),
         ),

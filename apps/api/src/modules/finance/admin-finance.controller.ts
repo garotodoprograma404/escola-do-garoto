@@ -8,11 +8,14 @@ import {
   Param,
   Post,
   Query,
+  Req,
   Res,
 } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import type { SessionUser } from '@vox/contracts'
-import type { Response } from 'express'
+import type { Request, Response } from 'express'
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js'
+import { requestInfo } from '../../common/request-info.js'
 import { CurrentUser, Roles } from '../auth/decorators.js'
 import {
   AdminFinanceService,
@@ -22,15 +25,24 @@ import {
   type LiquidityData,
   type WithdrawalRequest,
 } from './admin-finance.service.js'
+import {
+  AdminRefundsService,
+  type AdminRefundRequest,
+  type ApproveRefundResult,
+} from './admin-refunds.service.js'
 import { AdminReportService } from './admin-report.service.js'
 import { AdminWithdrawalsService } from './admin-withdrawals.service.js'
 import {
   idParamSchema,
   payWithdrawalSchema,
+  refundFiltersSchema,
+  rejectRefundSchema,
   rejectWithdrawalSchema,
   reportQuerySchema,
   withdrawalFiltersSchema,
   type PayWithdrawalInput,
+  type RefundFilters,
+  type RejectRefundInput,
   type RejectWithdrawalInput,
   type ReportQuery,
   type WithdrawalFilters,
@@ -49,6 +61,7 @@ export class AdminFinanceController {
     @Inject(AdminFinanceService) private readonly finance: AdminFinanceService,
     @Inject(AdminWithdrawalsService) private readonly withdrawals: AdminWithdrawalsService,
     @Inject(AdminReportService) private readonly reports: AdminReportService,
+    @Inject(AdminRefundsService) private readonly refunds: AdminRefundsService,
   ) {}
 
   @Get('metrics')
@@ -115,6 +128,36 @@ export class AdminFinanceController {
     @Body(new ZodValidationPipe(payWithdrawalSchema)) body: PayWithdrawalInput,
   ): Promise<WithdrawalRequest> {
     return this.withdrawals.pay(admin.id, id, body)
+  }
+
+  @Get('refunds')
+  listRefunds(
+    @Query(new ZodValidationPipe(refundFiltersSchema)) filters: RefundFilters,
+  ): Promise<AdminRefundRequest[]> {
+    return this.refunds.list(filters)
+  }
+
+  /** Aprova e pede o estorno ao meio de pagamento (cada clique fala com o Mercado Pago). */
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('refunds/:id/approve')
+  @HttpCode(HttpStatus.OK)
+  approveRefund(
+    @CurrentUser() admin: SessionUser,
+    @Param('id', idPipe) id: number,
+    @Req() req: Request,
+  ): Promise<ApproveRefundResult> {
+    return this.refunds.approve(admin.id, id, requestInfo(req))
+  }
+
+  @Post('refunds/:id/reject')
+  @HttpCode(HttpStatus.OK)
+  rejectRefund(
+    @CurrentUser() admin: SessionUser,
+    @Param('id', idPipe) id: number,
+    @Body(new ZodValidationPipe(rejectRefundSchema)) body: RejectRefundInput,
+    @Req() req: Request,
+  ): Promise<AdminRefundRequest> {
+    return this.refunds.reject(admin.id, id, body.reason, requestInfo(req))
   }
 
   @Get('report')

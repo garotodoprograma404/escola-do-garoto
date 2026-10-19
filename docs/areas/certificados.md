@@ -95,7 +95,8 @@ só no preview HTML, não no PDF.
   caminho gravado no schema do modelo só pode ser `templates/<id>/assets/...`: não dá para apontar o fundo
   para o PDF de um aluno e vê-lo no preview.
 - **Código imprevisível.** O código do certificado usa `crypto.randomInt`.
-- **Matrícula cancelada ou reembolsada não gera certificado.**
+- **Matrícula cancelada ou reembolsada não gera certificado.** E a compra estornada **revoga** o certificado
+  ativo daquela matrícula (motivo "Compra estornada", evento `revoked` sem ator), na mesma transação do estorno.
 
 ## Limitações conhecidas
 

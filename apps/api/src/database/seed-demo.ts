@@ -69,6 +69,8 @@ import { QuestionsService as ProducerQuestionsService } from '../modules/produce
 import { BlogService } from '../modules/blog/blog.service.js'
 import { GamificationService } from '../modules/gamification/gamification.service.js'
 import { blogPostBodySchema } from '../modules/blog/blog.schemas.js'
+import { StudentFinanceService } from '../modules/finance/student-finance.service.js'
+import { refundRequestSchema } from '../modules/finance/finance.schemas.js'
 
 if (existsSync('.env')) process.loadEnvFile('.env')
 if (process.env.DEMO_MODE !== 'true') {
@@ -1099,6 +1101,28 @@ async function main() {
              u13 as (update course_questions set created_at = created_at - ${shift}, answered_at = answered_at - ${shift} where user_id = ${id}),
              u14 as (update coupon_usage set used_at = used_at - ${shift} where user_id = ${id})
         select 1`)
+    }
+
+    // Um pedido de reembolso esperando o admin (aba Reembolsos do Financeiro): a compra mais recente
+    // de um aluno que chegou há poucos dias, ainda dentro do prazo de 7 dias.
+    const recentIndex = arrivals.findIndex((days) => days <= 5)
+    if (recentIndex >= 0) {
+      const buyer = students[recentIndex]!
+      const [purchase] = (
+        await db.execute<{ id: number }>(
+          sql`select id from transactions where user_id = ${buyer.id} and type = 'sale'
+              and status = 'completed' and amount > 0 order by created_at desc limit 1`,
+        )
+      ).rows
+      if (purchase) {
+        await app.get(StudentFinanceService).requestRefund(
+          buyer.id,
+          refundRequestSchema.parse({
+            transactionId: Number(purchase.id),
+            reason: 'Comprei achando que era outro curso. Posso ter o reembolso, por favor?',
+          }),
+        )
+      }
     }
 
     const [{ total }] = (

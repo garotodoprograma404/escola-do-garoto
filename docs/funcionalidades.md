@@ -61,7 +61,7 @@ Legenda:
 | Avaliar o curso                                                  | player                           | ✅       | só quem concluiu                                                                     |
 | Certificados (listar e baixar PDF)                               | `/student/certificates`          | ✅       |                                                                                      |
 | Financeiro (compras, comprovante)                                | `/student/financials`            | ✅       |                                                                                      |
-| Pedir reembolso                                                  | `/student/financials`            | ⚠️       | API pronta; botão não está montado                                                   |
+| Pedir reembolso                                                  | `/student/financials`            | ✅       | até 7 dias; a compra mostra o andamento e o motivo da recusa                         |
 | Perfil (nome, avatar, senha, preferências)                       | `/student/profile`               | ✅       |                                                                                      |
 | Suporte: abrir ticket e conversar em tempo real                  | `/student/support`               | ✅       |                                                                                      |
 | Notificações                                                     | `/notifications`                 | ✅       | página e sino no cabeçalho, com aviso em tempo real                                  |
@@ -110,6 +110,7 @@ Legenda:
 | Mercado Pago: credenciais pelo painel           | `/admin/settings` (Financeiro)                   | ✅       | token conferido no Mercado Pago e guardado cifrado; sem credenciais o checkout pago fica desligado |
 | Suporte: central de tickets                     | `/admin/support`                                 | ✅       |                                                                                                    |
 | Financeiro: métricas e saques                   | `/admin/finance`                                 | ✅       |                                                                                                    |
+| Reembolsos: aprovar (estorno) ou recusar        | `/admin/finance` (Reembolsos)                    | ✅       | estorna pelo Mercado Pago (ou simulado na demonstração); tira acesso, certificado e comissões      |
 | Produtores: candidaturas e contatos             | `/admin/producer-leads`                          | ✅       | aprovar concede o papel                                                                            |
 | Afiliados: candidaturas e parcerias             | `/admin/affiliates`                              | ✅       |                                                                                                    |
 

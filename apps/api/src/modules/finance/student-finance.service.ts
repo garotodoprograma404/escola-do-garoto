@@ -17,9 +17,13 @@ import {
 import { dbToCents } from '../checkout/money.js'
 import { renderInvoiceHtml, type InvoiceData } from './invoice-html.js'
 import type { RefundRequestInput, StudentTransactionsQuery } from './finance.schemas.js'
-
-/** Janela para pedir reembolso (mesma da tela: 30 dias da compra). */
-const REFUND_WINDOW_DAYS = 30
+import {
+  REFUND_WINDOW_DAYS,
+  refundDeadlineOf,
+  refundMetadataOf,
+  refundStageOf,
+  type RefundStage,
+} from './refund-request.js'
 /** Alíquota informativa do comprovante. */
 const INVOICE_TAX_RATE = 15
 
@@ -34,6 +38,16 @@ export type StudentTransaction = {
   course_thumbnail: string | null
   producer_name: string
   created_at: string
+  /** Compra que ainda pode ter reembolso pedido: até quando. `null` = não pode (ou já pediu). */
+  refund_deadline: string | null
+  /** Pedido de reembolso desta compra (na linha da compra e na do próprio reembolso). */
+  refund_request: {
+    id: string
+    stage: RefundStage
+    reason: string | null
+    rejection_reason: string | null
+    requested_at: string
+  } | null
 }
 
 export type StudentFinancialStats = {
@@ -51,7 +65,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function courseIdsOf(row: Pick<TransactionRow, 'courseId' | 'metadata'>): number[] {
+export function courseIdsOf(row: Pick<TransactionRow, 'courseId' | 'metadata'>): number[] {
   const metadata = isRecord(row.metadata) ? row.metadata : {}
   const fromMetadata = Array.isArray(metadata.course_ids)
     ? metadata.course_ids.map(Number).filter((id) => Number.isInteger(id) && id > 0)
@@ -76,6 +90,14 @@ function studentScope(userId: string) {
       eq(transactions.type, 'refund'),
     ),
   )
+}
+
+/** Compra paga, com valor, sem pedido de reembolso e dentro do prazo: até quando pode pedir. */
+function refundDeadline(row: TransactionRow, hasRequest: boolean): string | null {
+  if (row.type !== 'sale' || row.status !== 'completed' || hasRequest) return null
+  if (dbToCents(row.amount) <= 0) return null
+  const deadline = refundDeadlineOf(row.createdAt)
+  return deadline.getTime() >= Date.now() ? deadline.toISOString() : null
 }
 
 @Injectable()
@@ -131,20 +153,16 @@ export class StudentFinanceService {
       .orderBy(desc(transactions.createdAt))
       .limit(5000)
 
+    // O valor devolvido é o da compra estornada. O pedido de reembolso concluído aponta para essa
+    // mesma compra, então não entra na soma (senão contaria duas vezes).
     const refunds = await this.db
       .select({ amount: transactions.amount })
       .from(transactions)
       .where(
         and(
-          eq(transactions.userId, userId),
-          or(
-            and(eq(transactions.type, 'refund'), eq(transactions.status, 'completed')),
-            and(
-              eq(transactions.type, 'sale'),
-              eq(transactions.status, 'refunded'),
-              sql`coalesce(${transactions.metadata}->>'source', '') <> 'producer_course_sale'`,
-            ),
-          ),
+          studentScope(userId),
+          eq(transactions.type, 'sale'),
+          eq(transactions.status, 'refunded'),
         ),
       )
 
@@ -247,9 +265,9 @@ export class StudentFinanceService {
   }
 
   /**
-   * Pede reembolso de uma compra. Só registra o pedido (`refund` pendente) para o financeiro
-   * tratar: nada é estornado nem o acesso muda aqui. Só uma venda (`sale`) do próprio aluno pode
-   * ser reembolsada.
+   * Pede reembolso de uma compra. Só registra o pedido (`refund` pendente) para o admin decidir
+   * (ver `AdminRefundsService`): nada é estornado nem o acesso muda aqui. Só uma compra paga do
+   * próprio aluno, dentro do prazo, e um pedido por compra (recusado também conta).
    */
   async requestRefund(userId: string, input: RefundRequestInput) {
     const [original] = await this.db
@@ -263,9 +281,13 @@ export class StudentFinanceService {
     if (original.status !== 'completed') {
       throw new BadRequestException('Apenas transações concluídas podem ser reembolsadas')
     }
-    const days = Math.floor((Date.now() - original.createdAt.getTime()) / 86_400_000)
-    if (days > REFUND_WINDOW_DAYS) {
-      throw new BadRequestException(`Prazo para reembolso expirado (${REFUND_WINDOW_DAYS} dias)`)
+    if (dbToCents(original.amount) <= 0) {
+      throw new BadRequestException('Compra gratuita não tem valor para reembolsar')
+    }
+    if (Date.now() > refundDeadlineOf(original.createdAt).getTime()) {
+      throw new BadRequestException(
+        `Prazo para reembolso expirado: o pedido vale até ${REFUND_WINDOW_DAYS} dias depois da compra`,
+      )
     }
 
     return this.db.transaction(async (tx) => {
@@ -317,6 +339,38 @@ export class StudentFinanceService {
         : []
     const originalById = new Map(originals.map((row) => [row.id, row]))
 
+    // Pedido de reembolso de cada compra listada (para mostrar o andamento na própria compra).
+    const purchaseIds = rows.filter((row) => row.type === 'sale').map((row) => String(row.id))
+    const refundRows =
+      purchaseIds.length > 0
+        ? await this.db
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.type, 'refund'),
+                inArray(
+                  sql<string>`${transactions.metadata}->>'original_transaction_id'`,
+                  purchaseIds,
+                ),
+              ),
+            )
+        : []
+    const refundByPurchase = new Map(
+      refundRows.map((row) => [Number(refundMetadataOf(row).original_transaction_id), row]),
+    )
+    const refundView = (row: TransactionRow): StudentTransaction['refund_request'] => {
+      const metadata = refundMetadataOf(row)
+      return {
+        id: String(row.id),
+        stage: refundStageOf(row),
+        reason: typeof metadata.reason === 'string' ? metadata.reason : null,
+        rejection_reason:
+          typeof metadata.rejection_reason === 'string' ? metadata.rejection_reason : null,
+        requested_at: row.createdAt.toISOString(),
+      }
+    }
+
     const courseIdsByRow = new Map(
       rows.map((row) => {
         const metadata = isRecord(row.metadata) ? row.metadata : {}
@@ -365,6 +419,13 @@ export class StudentFinanceService {
         course_thumbnail: found[0]?.thumbnailUrl ?? null,
         producer_name: producers.length > 0 ? producers.join(', ') : 'Produtor desconhecido',
         created_at: row.createdAt.toISOString(),
+        refund_deadline: refundDeadline(row, refundByPurchase.has(row.id)),
+        refund_request:
+          row.type === 'refund'
+            ? refundView(row)
+            : refundByPurchase.has(row.id)
+              ? refundView(refundByPurchase.get(row.id)!)
+              : null,
       }
     })
   }

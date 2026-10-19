@@ -1,6 +1,8 @@
 import { and, asc, eq, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm'
 import type { DbExecutor } from '../../database/database.module.js'
 import {
+  certificateEvents,
+  certificates,
   checkoutOrderItems,
   checkoutOrders,
   couponUsage,
@@ -367,9 +369,10 @@ export async function fulfillOrder(tx: DbExecutor, order: OrderRow, context: Ful
 }
 
 /**
- * Estorno/chargeback do pagamento que liquidou o pedido: o acesso dado POR ESTA compra acaba e as
- * transações do pedido (aluno, produtor, afiliado) ficam `refunded`, que é o que tira o valor do
- * saldo do produtor. Matrícula que a pessoa já tinha antes da compra não é tocada.
+ * Estorno/chargeback do pagamento que liquidou o pedido: o acesso dado POR ESTA compra acaba (com o
+ * certificado dessas matrículas) e as transações do pedido (aluno, produtor, afiliado) ficam
+ * `refunded`, que é o que tira o valor do saldo do produtor e do afiliado. Matrícula que a pessoa
+ * já tinha antes da compra não é tocada.
  */
 export async function revokeOrderAccess(tx: DbExecutor, order: OrderRow) {
   const metadata = metadataOf(order)
@@ -411,8 +414,12 @@ export async function revokeOrderAccess(tx: DbExecutor, order: OrderRow) {
           inArray(enrollments.status, ['active', 'completed']),
         ),
       )
-      .returning({ courseId: enrollments.courseId })
+      .returning({ id: enrollments.id, courseId: enrollments.courseId })
     revoked = rows.map((row) => row.courseId)
+    await revokeEnrollmentCertificates(
+      tx,
+      rows.map((row) => row.id),
+    )
   }
   if (revoked.length > 0) {
     await tx
@@ -438,8 +445,8 @@ export async function revokeOrderAccess(tx: DbExecutor, order: OrderRow) {
       ),
     )
 
-  // Pedido de reembolso do aluno ainda pendente: o estorno já resolveu, então o pedido é encerrado
-  // (senão o valor seria devolvido duas vezes quando o admin tratar o pedido).
+  // Pedido de reembolso do aluno ainda aberto: o estorno resolveu (aprovado aqui ou feito direto no
+  // Mercado Pago), então ele é concluído. O valor devolvido conta UMA vez: pela compra `refunded`.
   if (order.userId) {
     const studentSales = await tx
       .select({ id: transactions.id })
@@ -456,9 +463,10 @@ export async function revokeOrderAccess(tx: DbExecutor, order: OrderRow) {
       await tx
         .update(transactions)
         .set({
-          status: 'failed',
+          status: 'completed',
           metadata: sql`coalesce(${transactions.metadata}, '{}'::jsonb) || ${JSON.stringify({
             closed_reason: 'order_refunded',
+            completed_at: new Date().toISOString(),
           })}::jsonb`,
         })
         .where(
@@ -474,4 +482,44 @@ export async function revokeOrderAccess(tx: DbExecutor, order: OrderRow) {
     }
   }
   return { revokedCourseIds: revoked }
+}
+
+/**
+ * Revoga o certificado ativo das matrículas estornadas (a verificação pública passa a mostrar
+ * "revogado"). Sem ator: quem decide é o estorno do pagamento, não um admin.
+ */
+async function revokeEnrollmentCertificates(tx: DbExecutor, enrollmentIds: number[]) {
+  if (enrollmentIds.length === 0) return
+  const now = new Date()
+  const reason = 'Compra estornada'
+  const revoked = await tx
+    .update(certificates)
+    .set({ status: 'revoked', revokedAt: now, revokedReason: reason, updatedAt: now })
+    .where(
+      and(inArray(certificates.enrollmentId, enrollmentIds), eq(certificates.status, 'active')),
+    )
+    .returning({ id: certificates.id, enrollmentId: certificates.enrollmentId })
+  if (revoked.length === 0) return
+  await tx.insert(certificateEvents).values(
+    revoked.map((row) => ({
+      certificateId: row.id,
+      enrollmentId: row.enrollmentId,
+      eventType: 'revoked' as const,
+      actorUserId: null,
+      previousStatus: 'active' as const,
+      newStatus: 'revoked' as const,
+      reason,
+      payload: { source: 'order_refunded' },
+      eventAt: now,
+    })),
+  )
+  await tx
+    .update(enrollments)
+    .set({ certificateUrl: null, updatedAt: now })
+    .where(
+      inArray(
+        enrollments.id,
+        revoked.map((row) => row.enrollmentId),
+      ),
+    )
 }

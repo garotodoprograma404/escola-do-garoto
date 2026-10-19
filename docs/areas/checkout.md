@@ -5,24 +5,26 @@ Checkout com Mercado Pago, cupons, financeiro do aluno e financeiro do admin. C�
 
 ## Rotas (prefixo `/api`)
 
-| Rota                                                                                       | Quem            | O que faz                                                                                 |
-| ------------------------------------------------------------------------------------------ | --------------- | ----------------------------------------------------------------------------------------- |
-| `GET  /api/checkout/payment-options`                                                       | público         | métodos de pagamento ligados no admin (`platform_settings`)                               |
-| `POST /api/checkout/coupons/apply`                                                         | logado          | "aplicar cupom" do carrinho: calcula o desconto sobre o preço do BANCO (nada é reservado) |
-| `POST /api/checkout/orders`                                                                | logado          | cria o pedido (ou devolve o pendente igual) e o link de pagamento; total 0 já nasce pago  |
-| `GET  /api/checkout/orders/:publicId`                                                      | **dono**        | pedido no formato `snake_case` das telas (lista fixa de campos)                           |
-| `POST /api/checkout/orders/:publicId/sync`                                                 | **dono**        | consulta o Mercado Pago e aplica (tela de sucesso)                                        |
-| `GET  /api/checkout/orders/:publicId/guest`                                                | público (id)    | só pedido SEM dono (compra sem conta), para "finalizar conta"                             |
-| `POST /api/checkout/orders/:publicId/finalize-account`                                     | público (id)    | define a senha de quem pagou sem ter conta (ver "Compra sem conta")                       |
-| `POST /api/payments/mercadopago/webhook`                                                   | Mercado Pago    | notificação **assinada** (`x-signature`); reconsulta o pagamento                          |
-| `POST /api/dev/payments/:publicId/simulate`                                                | dono, só `fake` | aprova/recusa/estorna pelo MESMO caminho do webhook (404 fora do modo `fake`)             |
-| `GET/POST/PATCH/DELETE /api/admin/coupons…`                                                | admin           | CRUD, ligar/desligar, estatísticas, histórico de uso, cursos elegíveis, código disponível |
-| `GET  /api/finance/student/transactions\|stats`                                            | logado (dono)   | histórico e resumo de compras                                                             |
-| `POST/GET /api/finance/student/transactions/:id/invoice`                                   | logado (dono)   | gera e baixa o comprovante                                                                |
-| `POST /api/finance/student/refunds`                                                        | logado (dono)   | pedido de reembolso (30 dias, um por compra)                                              |
-| `GET  /api/admin/finance/metrics\|transactions\|liquidity\|fiscal-compliance\|withdrawals` | admin           | painel do admin                                                                           |
-| `POST /api/admin/finance/withdrawals/:id/approve\|processing\|reject\|pay`                 | admin           | ciclo do saque                                                                            |
-| `GET  /api/admin/finance/report`                                                           | admin           | relatório CSV do período                                                                  |
+| Rota                                                                                       | Quem            | O que faz                                                                                    |
+| ------------------------------------------------------------------------------------------ | --------------- | -------------------------------------------------------------------------------------------- |
+| `GET  /api/checkout/payment-options`                                                       | público         | métodos de pagamento ligados no admin (`platform_settings`)                                  |
+| `POST /api/checkout/coupons/apply`                                                         | logado          | "aplicar cupom" do carrinho: calcula o desconto sobre o preço do BANCO (nada é reservado)    |
+| `POST /api/checkout/orders`                                                                | logado          | cria o pedido (ou devolve o pendente igual) e o link de pagamento; total 0 já nasce pago     |
+| `GET  /api/checkout/orders/:publicId`                                                      | **dono**        | pedido no formato `snake_case` das telas (lista fixa de campos)                              |
+| `POST /api/checkout/orders/:publicId/sync`                                                 | **dono**        | consulta o Mercado Pago e aplica (tela de sucesso)                                           |
+| `GET  /api/checkout/orders/:publicId/guest`                                                | público (id)    | só pedido SEM dono (compra sem conta), para "finalizar conta"                                |
+| `POST /api/checkout/orders/:publicId/finalize-account`                                     | público (id)    | define a senha de quem pagou sem ter conta (ver "Compra sem conta")                          |
+| `POST /api/payments/mercadopago/webhook`                                                   | Mercado Pago    | notificação **assinada** (`x-signature`); reconsulta o pagamento                             |
+| `POST /api/dev/payments/:publicId/simulate`                                                | dono, só `fake` | aprova/recusa/estorna pelo MESMO caminho do webhook (404 fora do modo `fake`)                |
+| `GET/POST/PATCH/DELETE /api/admin/coupons…`                                                | admin           | CRUD, ligar/desligar, estatísticas, histórico de uso, cursos elegíveis, código disponível    |
+| `GET  /api/finance/student/transactions\|stats`                                            | logado (dono)   | histórico e resumo de compras                                                                |
+| `POST/GET /api/finance/student/transactions/:id/invoice`                                   | logado (dono)   | gera e baixa o comprovante                                                                   |
+| `POST /api/finance/student/refunds`                                                        | logado (dono)   | pedido de reembolso (7 dias, um por compra)                                                  |
+| `GET  /api/admin/finance/metrics\|transactions\|liquidity\|fiscal-compliance\|withdrawals` | admin           | painel do admin                                                                              |
+| `POST /api/admin/finance/withdrawals/:id/approve\|processing\|reject\|pay`                 | admin           | ciclo do saque                                                                               |
+| `GET  /api/admin/finance/report`                                                           | admin           | relatório CSV do período                                                                     |
+| `GET  /api/admin/finance/refunds`                                                          | admin           | fila de pedidos de reembolso (`?status=open\|all\|requested\|approved\|completed\|rejected`) |
+| `POST /api/admin/finance/refunds/:id/approve\|reject`                                      | admin           | aprova (pede o estorno ao gateway) ou recusa com motivo                                      |
 
 ## Código principal
 
@@ -90,9 +92,27 @@ Checkout com Mercado Pago, cupons, financeiro do aluno e financeiro do admin. C�
   junto: +1 ao matricular, -1 ao estornar. Comprar um curso estornado reativa a MESMA matrícula. O produtor
   não compra o próprio curso.
 - **Comprovante:** HTML (`comprovante-<número>.html`), gerado sob demanda e baixado só pelo dono.
-- **Pedido de reembolso do aluno:** registra uma transação `refund` pendente (valor da compra e motivo) para
-  o financeiro; **não** estorna sozinho. Quem estorna é o painel do Mercado Pago, e o webhook faz o resto.
-  A taxa de reembolso do painel do admin é reembolsados / pagos.
+- **Reembolso** (`finance/refund-request.ts`, `finance/admin-refunds.service.ts`):
+  - o aluno pede em `/student/financials` até **7 dias** depois da compra (direito de arrependimento, a mesma
+    regra da política de reembolso), uma vez por compra; compra grátis não tem reembolso. Vira uma
+    transação `refund` pendente (valor do pedido inteiro e motivo) e a compra mostra o andamento;
+  - o admin decide na aba **Reembolsos** de `/admin/finance`. **Recusar** exige motivo (o aluno vê no sino e
+    na compra). **Aprovar** marca `approved_at` e chama `PaymentsService.refundOrder`: no Mercado Pago, pede
+    o estorno total (`POST /v1/payments/{id}/refunds` com `X-Idempotency-Key: refund-request-<id>`) e
+    reconsulta o pagamento; compra do simulador (`fake-…`) é estornada na hora;
+  - quem muda o pedido é o pagamento estornado, pelo `applyPayment` de sempre: pedido `refunded`, matrícula
+    `refunded`, certificado revogado ("Compra estornada"), transações do pedido `refunded` (o produtor e o
+    afiliado perdem a parte deles), pedido de reembolso `completed` e aviso "Compra estornada" no sino;
+  - se o Mercado Pago ainda não confirmou, o pedido fica "aprovado, aguardando estorno" e o webhook conclui.
+    O admin pode tentar de novo (mesma chave, com o id do pagamento: não estorna duas vezes). Se o
+    estorno não vai acontecer, o admin encerra o aprovado sem estorno, com motivo (só se a compra não foi
+    estornada);
+  - estorno feito direto no painel do Mercado Pago também conclui o pedido de reembolso aberto. O valor
+    devolvido conta uma vez só no resumo do aluno (pela compra `refunded`);
+  - compra sem pagamento estornável (`FREE_`, `ORDER_`, ou do simulador fora do modo simulador): a API recusa
+    aprovar e o admin devolve por fora;
+  - a compra que um produtor faz como aluno (e o reembolso dela) nunca entra no saldo de produtor dele.
+    A taxa de reembolso do painel do admin é reembolsados / pagos.
 - **Saque do admin:** aprovar, processar, rejeitar e marcar como pago (aprovado → concluído).
 
 ### Compra sem conta ("finalizar conta")
@@ -113,7 +133,7 @@ produto).
 | Webhook sem assinatura                                                       | HMAC `x-signature` obrigatório (comparação em tempo constante, tamanho conferido antes); o `data.id` processado é o da query assinada; token na URL não vale                                                                                                                                                          |
 | Cupom que nunca esgota ou é usado além do limite                             | `coupons.usage_count` é reserva + consumo, incrementado por `UPDATE … WHERE usage_count < usage_limit` (atômico); devolvido se o pedido expira, é substituído ou cancelado; **recusa NÃO devolve** (o link ainda aceita outro meio) e, sempre que o cupom volta, o link é encerrado no Mercado Pago (`closeCheckout`) |
 | Corrida entre webhooks duplicando transação e comissão                       | pedido travado `FOR UPDATE` + máquina de estados + `ON CONFLICT DO NOTHING`; pedido, matrícula, transações e cupom na mesma transação; reentrega não duplica                                                                                                                                                          |
-| Estorno sem perda de acesso                                                  | `refunded`/`charged_back` → pedido `refunded`, matrícula `refunded` (só a que ESSA compra concedeu; curso coberto por outro pedido pago continua), transações do pedido `refunded` (saem do saldo do produtor) e pedido de reembolso pendente encerrado                                                               |
+| Estorno sem perda de acesso                                                  | `refunded`/`charged_back` → pedido `refunded`, matrícula `refunded` (só a que ESSA compra concedeu; curso coberto por outro pedido pago continua), transações do pedido `refunded` (saem do saldo do produtor) e pedido de reembolso aberto concluído; certificado revogado e aluno avisado                           |
 | Pedido pendente eterno ou duplicado                                          | expira em 48 h; pedido igual é reaproveitado; pedido novo substitui o pendente que divide curso ou cupom                                                                                                                                                                                                              |
 | Pedido visível ou reconciliável por qualquer um com o id; vazamento no log   | só o dono; resposta com lista fixa de campos (sem `user_id`, `payment_id`, telefone, CPF, metadata interno); `payment_events` guarda só campos permitidos; erro do gateway nunca inclui token, corpo da resposta nem dado do pagador                                                                                  |
 | Erro de arredondamento, taxa mal interpretada, curso coberto por cupom com 0 | tudo em centavos inteiros; taxa é percentual (`1` = 1%); a preferência de pagamento tem UMA linha pelo total; total 0 não passa pelo Mercado Pago e nasce `free_completed`                                                                                                                                            |
@@ -140,8 +160,8 @@ produto).
   comissão ainda sai.
 - O cliente HTTP do Mercado Pago e a assinatura foram conferidos com respostas simuladas; pagamento real
   contra a API do Mercado Pago depende de credenciais de teste e túnel https.
-- Reembolso iniciado pelo admin, estorno parcial e boleto compensado em dias ficam fora: o estorno é feito
-  no painel do Mercado Pago.
+- Estorno parcial e boleto compensado em dias ficam fora: o reembolso estorna sempre o pedido inteiro.
+- O estorno pelo painel ainda não foi conferido com uma conta real do Mercado Pago (no simulador, sim).
 - Comprovante e relatório são HTML e CSV; PDF exigiria uma biblioteca nova (decisão de arquitetura).
 - Se o Postgres abortar uma transação por deadlock, o efeito é um 500: o Mercado Pago reenvia a notificação
   e o navegador tenta de novo, sem dado inconsistente.

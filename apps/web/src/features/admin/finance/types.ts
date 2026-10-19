@@ -83,3 +83,26 @@ export interface FinanceFilters {
   dateTo: string
   producerId: string | 'ALL'
 }
+
+export type RefundStage = 'requested' | 'approved' | 'completed' | 'rejected'
+
+/** Pedido de reembolso de um aluno, como a fila do admin mostra. */
+export interface AdminRefundRequest {
+  id: string
+  amount: number
+  stage: RefundStage
+  reason: string | null
+  rejection_reason: string | null
+  requested_at: string
+  decided_at: string | null
+  student: { id: string; name: string; email: string }
+  purchase: {
+    transaction_id: string | null
+    purchased_at: string | null
+    payment_method: string | null
+    course_titles: string
+  }
+  order_public_id: string | null
+  /** Por onde o dinheiro volta: Mercado Pago (API), simulador (demonstração) ou fora do sistema. */
+  gateway: 'mercadopago' | 'simulator' | 'manual'
+}

@@ -11,6 +11,19 @@ export interface StudentTransaction {
   course_thumbnail: string | null
   producer_name: string
   created_at: string
+  /** Até quando dá para pedir reembolso desta compra; `null` = não dá (prazo, já pediu, grátis). */
+  refund_deadline: string | null
+  refund_request: RefundRequestInfo | null
+}
+
+type RefundStage = 'requested' | 'approved' | 'completed' | 'rejected'
+
+export interface RefundRequestInfo {
+  id: string
+  stage: RefundStage
+  reason: string | null
+  rejection_reason: string | null
+  requested_at: string
 }
 
 export interface FinancialStats {

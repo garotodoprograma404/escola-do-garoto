@@ -35,6 +35,10 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Mercado Pago configurado pelo painel do admin (Configurações → Financeiro): cole o Access Token e a
   assinatura do webhook, a plataforma confere o token na hora e mostra a conta, se é de teste ou de
   produção e o endereço do webhook pronto para copiar. Nada de pagamento no `.env`.
+- Reembolso de ponta a ponta: o aluno pede em até 7 dias pela própria compra e acompanha o andamento; o
+  admin aprova ou recusa com motivo na aba Reembolsos do Financeiro. Aprovado, o estorno sai pelo Mercado
+  Pago (simulado na demonstração), o acesso e o certificado daquela compra são revogados e as comissões do
+  produtor e do afiliado são descontadas. O aluno é avisado no sino.
 
 ### Mudado
 
@@ -44,3 +48,5 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ### Segurança
 
 - As credenciais ficam cifradas no banco (AES-256-GCM) e nunca voltam para a tela nem para o log.
+- A compra que um produtor faz como aluno não entra mais no saldo de produtor dele (antes podia virar saldo
+  para saque).
