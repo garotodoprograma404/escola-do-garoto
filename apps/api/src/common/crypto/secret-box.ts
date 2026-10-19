@@ -10,6 +10,12 @@ import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:cr
  */
 const VERSION = 'v1'
 
+/**
+ * Chave-mestra só para desenvolvimento sem `FILES_SIGNING_SECRET` (em produção ele é obrigatório,
+ * ver env.ts): assim os segredos salvos continuam legíveis depois de reiniciar a API local.
+ */
+export const DEV_MASTER_SECRET = 'segredo-de-desenvolvimento-nao-use-em-producao'
+
 export function deriveSecretKey(masterSecret: string, purpose: string): Buffer {
   return Buffer.from(hkdfSync('sha256', masterSecret, 'vox-secret-box', purpose, 32))
 }

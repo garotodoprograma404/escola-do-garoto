@@ -108,6 +108,7 @@ Legenda:
 | Banners e vitrines                              | `/admin/content`                                 | ✅       | a home exibe e conta os cliques                                                                    |
 | Configurações (geral, marca, financeiro, legal) | `/admin/settings`                                | ✅       |                                                                                                    |
 | Mercado Pago: credenciais pelo painel           | `/admin/settings` (Financeiro)                   | ✅       | token conferido no Mercado Pago e guardado cifrado; sem credenciais o checkout pago fica desligado |
+| E-mail (SMTP) pelo painel                       | `/admin/settings` (E-mail)                       | ✅       | conecta no servidor ao salvar, senha cifrada, e-mail de teste para o admin                         |
 | Suporte: central de tickets                     | `/admin/support`                                 | ✅       |                                                                                                    |
 | Financeiro: métricas e saques                   | `/admin/finance`                                 | ✅       |                                                                                                    |
 | Reembolsos: aprovar (estorno) ou recusar        | `/admin/finance` (Reembolsos)                    | ✅       | estorna pelo Mercado Pago (ou simulado na demonstração); tira acesso, certificado e comissões      |

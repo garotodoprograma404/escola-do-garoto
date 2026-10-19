@@ -24,6 +24,7 @@
     "prebuild": "pnpm --filter @vox/contracts build",
     "pretypecheck": "pnpm --filter @vox/contracts build",
     "db:seed": "pnpm --filter @vox/api db:seed",
+    "admin:create": "pnpm --filter @vox/api admin:create",
     "db:seed:demo": "pnpm --filter @vox/api db:seed:demo"
   },
   "devDependencies": {

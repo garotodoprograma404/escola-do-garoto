@@ -39,6 +39,11 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
   admin aprova ou recusa com motivo na aba Reembolsos do Financeiro. Aprovado, o estorno sai pelo Mercado
   Pago (simulado na demonstração), o acesso e o certificado daquela compra são revogados e as comissões do
   produtor e do afiliado são descontadas. O aluno é avisado no sino.
+- E-mail (SMTP) configurado pelo painel do admin (Configurações → E-mail), com atalhos para Resend, Brevo,
+  Gmail e Amazon SES: a plataforma conecta no servidor ao salvar e manda um e-mail de teste para você.
+  Nada de e-mail no `.env`.
+- Comando `pnpm admin:create` (em produção, `node dist/database/create-admin.js`) para criar o primeiro
+  admin pelo terminal, sem depender de e-mail.
 
 ### Mudado
 
@@ -50,5 +55,8 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ### Segurança
 
 - As credenciais ficam cifradas no banco (AES-256-GCM) e nunca voltam para a tela nem para o log.
+- A senha do e-mail fica cifrada no banco e só é reaproveitada com o mesmo servidor, porta e usuário; em
+  produção o servidor precisa ser um endereço público.
+- Em produção sem servidor de e-mail, o cadastro pelo site fica fechado com aviso.
 - A compra que um produtor faz como aluno não entra mais no saldo de produtor dele (antes podia virar saldo
   para saque).

@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common'
 import {
@@ -26,6 +27,7 @@ import type { Env } from '../../config/env.js'
 import { DB, type Database } from '../../database/database.module.js'
 import { isUniqueViolation } from '../../database/postgres-errors.js'
 import { emailVerificationTokens, passwordResetTokens, users } from '../../database/schema/index.js'
+import { MailSettingsService } from '../mail/mail-settings.service.js'
 import { MailService } from '../mail/mail.service.js'
 import { UsersService } from '../users/users.service.js'
 import {
@@ -59,6 +61,7 @@ export class AuthService {
     @Inject(UsersService) private readonly users: UsersService,
     @Inject(SessionsService) private readonly sessions: SessionsService,
     @Inject(MailService) private readonly mail: MailService,
+    @Inject(MailSettingsService) private readonly mailSettings: MailSettingsService,
   ) {}
 
   /**
@@ -72,6 +75,13 @@ export class AuthService {
    * - e-mail já confirmado → nada muda; o dono recebe um aviso "você já tem conta".
    */
   async register(input: RegisterInput): Promise<void> {
+    // Produção sem servidor de e-mail: ninguém receberia o link de confirmação, então o cadastro
+    // avisa em vez de prometer um e-mail que não sai (o primeiro admin nasce por `admin:create`).
+    if ((await this.mailSettings.mode()) === 'disabled') {
+      throw new ServiceUnavailableException(
+        'O cadastro está temporariamente indisponível: a plataforma ainda não configurou o envio de e-mails. Tente mais tarde.',
+      )
+    }
     // Hash sempre, mesmo quando não vai ser usado: o tempo de resposta não denuncia a situação da conta.
     const passwordHash = await hashPassword(input.password)
     const existing = await this.users.findAccountByEmail(input.email)

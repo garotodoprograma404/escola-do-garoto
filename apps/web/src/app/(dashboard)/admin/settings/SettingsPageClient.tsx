@@ -7,7 +7,9 @@ import { BrandingSettings } from '@/features/admin/settings/components/BrandingS
 import { FinancialSettings } from '@/features/admin/settings/components/FinancialSettings.client'
 import { LegalSettings } from '@/features/admin/settings/components/LegalSettings.client'
 import { MercadoPagoSettings } from '@/features/admin/settings/components/MercadoPagoSettings.client'
+import { MailSettings } from '@/features/admin/settings/components/MailSettings.client'
 import type {
+  MailSettingsView,
   PaymentGatewayView,
   SettingsSection,
   PlatformSettings,
@@ -24,6 +26,7 @@ interface SettingsPageClientProps {
   financialSettings: PlatformSettings['financial']
   legalSettings: PlatformSettings['legal']
   paymentGateway: PaymentGatewayView | null
+  mailSettings: MailSettingsView | null
 }
 
 export function SettingsPageClient({
@@ -32,6 +35,7 @@ export function SettingsPageClient({
   financialSettings,
   legalSettings,
   paymentGateway,
+  mailSettings,
 }: SettingsPageClientProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('general')
   const [currentGeneralSettings, setCurrentGeneralSettings] = useState(generalSettings)
@@ -129,6 +133,10 @@ export function SettingsPageClient({
               <FinancialSettings settings={currentFinancialSettings} onSave={handleSaveFinancial} />
             </div>
           )}
+
+          {activeSection === 'email' && mailSettings ? (
+            <MailSettings initial={mailSettings} />
+          ) : null}
 
           {activeSection === 'legal' && (
             <LegalSettings settings={currentLegalSettings} onSave={handleSaveLegal} />

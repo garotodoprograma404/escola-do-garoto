@@ -5,15 +5,16 @@ Tudo roda em quatro containers: **Caddy** (HTTPS e única porta aberta), **front
 
 ## O que você precisa antes
 
-| Item                       | Para quê                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------------- |
-| Servidor Linux (2 GB+ RAM) | roda os containers; portas 80 e 443 liberadas                                         |
-| Domínio com DNS apontando  | o Caddy emite o HTTPS sozinho (Let's Encrypt); o cookie de sessão exige HTTPS         |
-| Conta no Mercado Pago      | Access Token e assinatura do webhook, colados no **painel do admin** depois de subir  |
-| Servidor SMTP              | e-mail de confirmação de conta e de recuperação de senha (Resend, SES, Brevo, Gmail…) |
+| Item                       | Para quê                                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Servidor Linux (2 GB+ RAM) | roda os containers; portas 80 e 443 liberadas                                                                            |
+| Domínio com DNS apontando  | o Caddy emite o HTTPS sozinho (Let's Encrypt); o cookie de sessão exige HTTPS                                            |
+| Conta no Mercado Pago      | Access Token e assinatura do webhook, colados no **painel do admin** depois de subir                                     |
+| Servidor SMTP              | e-mail de confirmação de conta e de recuperação de senha (Resend, SES, Brevo, Gmail…), cadastrado no **painel do admin** |
 
-Sem SMTP a API **não sobe** em produção (o driver `console` é proibido lá): ninguém receberia o link
-de confirmação.
+Mercado Pago e e-mail não vão no `.env`: são cadastrados no painel depois de subir. Até o e-mail ser
+cadastrado, nenhum e-mail sai (ninguém confirma cadastro nem troca senha), então faça isso antes de
+abrir o site.
 
 ## Passo a passo
 
@@ -29,18 +30,25 @@ docker compose -f infra/producao/compose.yaml --env-file infra/producao/.env up 
 Na subida a API aplica as migrations sozinha; se alguma falhar, o container não sobe (veja
 `docker compose ... logs api`). O primeiro build leva alguns minutos.
 
-1. **Primeiro admin:** crie uma conta pelo site e depois conceda o papel no banco (uma vez):
+1. **Primeiro admin:** rode o comando abaixo e responda e-mail, nome e senha (a senha não aparece). Ele
+   cria a conta já confirmada e com o papel de admin, sem depender de e-mail. Se alguém já tiver se
+   cadastrado pelo site com esse e-mail, a senha passa a ser a que você digitou e o acesso dessa pessoa
+   cai. Serve também para recuperar o acesso de admin.
    ```bash
-   docker compose -f infra/producao/compose.yaml --env-file infra/producao/.env exec postgres \
-     psql -U escola -d escola -c "INSERT INTO user_roles (user_id, role) SELECT id, 'admin' FROM users WHERE email = 'voce@exemplo.com'"
+   docker compose -f infra/producao/compose.yaml --env-file infra/producao/.env exec api \
+     node dist/database/create-admin.js
    ```
-   Depois, tudo pelo painel admin (configurações, logo, categorias, cupons…).
-2. **Mercado Pago:** no painel do admin, em **Configurações → Financeiro**, siga o passo a passo da tela:
+   Depois, tudo pelo painel admin (configurações, logo, categorias, cupons…). Até o e-mail ser
+   cadastrado (passo 2), o cadastro pelo site fica fechado com aviso.
+2. **E-mail:** em **Configurações → E-mail**, escolha o atalho do seu provedor (Resend, Brevo, Gmail,
+   Amazon SES) ou preencha servidor e porta, cole o usuário e a senha (ou chave de API) e o remetente. O
+   sistema conecta no servidor ao salvar; depois use **Enviar e-mail de teste** (chega no seu e-mail).
+3. **Mercado Pago:** no painel do admin, em **Configurações → Financeiro**, siga o passo a passo da tela:
    cole o **Access Token** (`APP_USR-`), cadastre no Mercado Pago a URL do webhook que a tela mostra (evento
    "Pagamentos") e cole a **assinatura secreta**. O sistema confere o token na hora. Até isso ser feito, a
    compra de cursos pagos fica desligada (os grátis funcionam). Pagamentos de teste **não** disparam
    webhook: use o simulador do painel do Mercado Pago.
-3. **Teste de fumaça:** abra o site, cadastre-se (o e-mail de confirmação precisa chegar), faça login, compre um
+4. **Teste de fumaça:** abra o site, cadastre-se (o e-mail de confirmação precisa chegar), faça login, compre um
    curso de valor baixo e veja a matrícula aparecer.
 
 ## Atualizar para uma versão nova

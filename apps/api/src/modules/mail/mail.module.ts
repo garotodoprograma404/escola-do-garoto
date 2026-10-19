@@ -1,33 +1,21 @@
 import { Global, Module } from '@nestjs/common'
-import { ENV } from '../../config/config.module.js'
-import type { Env } from '../../config/env.js'
-import { ConsoleMailService } from './console-mail.service.js'
+import { AdminMailSettingsController } from './admin-mail-settings.controller.js'
+import { DynamicMailService } from './dynamic-mail.service.js'
+import { MailSettingsService } from './mail-settings.service.js'
 import { MailService } from './mail.service.js'
-import { SmtpMailService } from './smtp-mail.service.js'
 
+/**
+ * E-mail: o resto do sistema só conhece a porta `MailService`; quem decide como envia é o
+ * `DynamicMailService`, pelo servidor que o admin cadastrou no painel.
+ */
 @Global()
 @Module({
+  controllers: [AdminMailSettingsController],
   providers: [
-    {
-      provide: MailService,
-      inject: [ENV],
-      useFactory: (env: Env): MailService => {
-        if (env.MAIL_DRIVER === 'smtp') {
-          // O schema do env garante host/porta/remetente quando o driver é `smtp`.
-          return new SmtpMailService({
-            host: env.SMTP_HOST!,
-            port: env.SMTP_PORT,
-            secure: env.SMTP_SECURE,
-            requireTls: env.SMTP_REQUIRE_TLS,
-            user: env.SMTP_USER,
-            password: env.SMTP_PASSWORD,
-            from: env.MAIL_FROM!,
-          })
-        }
-        return new ConsoleMailService()
-      },
-    },
+    MailSettingsService,
+    DynamicMailService,
+    { provide: MailService, useExisting: DynamicMailService },
   ],
-  exports: [MailService],
+  exports: [MailService, MailSettingsService],
 })
 export class MailModule {}

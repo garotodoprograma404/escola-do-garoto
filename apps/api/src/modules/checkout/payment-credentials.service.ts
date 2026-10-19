@@ -1,7 +1,12 @@
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { deriveSecretKey, openSecret, sealSecret } from '../../common/crypto/secret-box.js'
+import {
+  DEV_MASTER_SECRET,
+  deriveSecretKey,
+  openSecret,
+  sealSecret,
+} from '../../common/crypto/secret-box.js'
 import { ENV } from '../../config/config.module.js'
 import type { Env } from '../../config/env.js'
 import { DB, type Database } from '../../database/database.module.js'
@@ -14,12 +19,6 @@ const API_BASE = 'https://api.mercadopago.com'
 const VERIFY_TIMEOUT_MS = 10_000
 const CACHE_MS = 30_000
 const MERCADOPAGO_WEBHOOK_PATH = '/api/payments/mercadopago/webhook'
-
-/**
- * Só para desenvolvimento sem `FILES_SIGNING_SECRET` (em produção ele é obrigatório, ver env.ts):
- * assim as credenciais salvas continuam legíveis depois de reiniciar a API local.
- */
-const DEV_MASTER_SECRET = 'segredo-de-desenvolvimento-nao-use-em-producao'
 
 export type MercadoPagoCredentials = {
   accessToken: string

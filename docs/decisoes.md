@@ -168,3 +168,12 @@ entra no saldo disponível para saque. Sem isso, o produtor sacava na hora e, se
 a plataforma devolvia o dinheiro ao aluno sem conseguir cobrar a diferença (o saldo só para no zero). A
 retenção é calculada pela data da venda na conta do saldo (`loadProducerBalance`), sem mudar o status das
 transações: receita, dashboard e Analytics continuam mostrando a venda na hora.
+
+## E-mail (SMTP) configurado pelo painel, não pelo `.env`
+
+Como o Mercado Pago: quem sobe a plataforma não mexe em variável de e-mail. O admin cadastra servidor,
+porta, usuário, senha e remetente em Configurações → E-mail (com atalhos para Resend, Brevo, Gmail e Amazon
+SES); a API conecta e autentica antes de gravar e guarda a senha cifrada. O envio é escolhido a cada e-mail
+(`DynamicMailService`): demonstração e desenvolvimento sem servidor ficam no log; produção sem servidor não
+envia e o painel avisa em vermelho (a API sobe do mesmo jeito). O primeiro admin nasce pelo comando `create-admin`
+no terminal do servidor (ver deploy.md), que grava a senha digitada ali.

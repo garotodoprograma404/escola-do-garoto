@@ -3,17 +3,25 @@ import { getFinancialSettingsForAdmin } from '@/features/admin/settings/actions/
 import { getGeneralSettingsForAdmin } from '@/features/admin/settings/actions/general-actions'
 import { getLegalSettingsForAdmin } from '@/features/admin/settings/actions/legal-actions'
 import { getPaymentGatewayForAdmin } from '@/features/admin/settings/actions/payment-gateway-actions'
+import { getMailSettingsForAdmin } from '@/features/admin/settings/actions/mail-settings-actions'
 import { SettingsPageClient } from './SettingsPageClient'
 
 export default async function AdminSettingsPage() {
-  const [brandingSettings, generalSettings, financialSettings, legalSettings, paymentGateway] =
-    await Promise.all([
-      getBrandingSettings(),
-      getGeneralSettingsForAdmin(),
-      getFinancialSettingsForAdmin(),
-      getLegalSettingsForAdmin(),
-      getPaymentGatewayForAdmin(),
-    ])
+  const [
+    brandingSettings,
+    generalSettings,
+    financialSettings,
+    legalSettings,
+    paymentGateway,
+    mailSettings,
+  ] = await Promise.all([
+    getBrandingSettings(),
+    getGeneralSettingsForAdmin(),
+    getFinancialSettingsForAdmin(),
+    getLegalSettingsForAdmin(),
+    getPaymentGatewayForAdmin(),
+    getMailSettingsForAdmin(),
+  ])
 
   return (
     <SettingsPageClient
@@ -22,6 +30,7 @@ export default async function AdminSettingsPage() {
       financialSettings={financialSettings}
       legalSettings={legalSettings}
       paymentGateway={paymentGateway}
+      mailSettings={mailSettings}
     />
   )
 }

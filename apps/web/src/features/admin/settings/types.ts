@@ -78,7 +78,7 @@ export interface PlatformSettings {
   seo: SeoSettings
 }
 
-export type SettingsSection = 'general' | 'branding' | 'financial' | 'legal'
+export type SettingsSection = 'general' | 'branding' | 'financial' | 'email' | 'legal'
 
 /** Situação do Mercado Pago no painel (`GET /api/admin/payment-gateway`). Nunca traz o segredo. */
 export interface PaymentGatewayView {
@@ -91,5 +91,23 @@ export interface PaymentGatewayView {
   verifiedAt: string | null
   updatedAt: string | null
   webhookUrl: string
+  demoMode: boolean
+}
+
+/** Servidor de e-mail como o painel vê: nunca a senha, só se ela está salva. */
+export interface MailSettingsView {
+  configured: boolean
+  host: string | null
+  port: number | null
+  secure: boolean | null
+  user: string | null
+  passwordConfigured: boolean
+  fromName: string | null
+  fromEmail: string | null
+  verifiedAt: string | null
+  updatedAt: string | null
+  /** A senha salva não abre mais (a chave do servidor mudou): precisa cadastrar de novo. */
+  passwordUnreadable: boolean
+  mode: 'smtp' | 'console' | 'disabled'
   demoMode: boolean
 }

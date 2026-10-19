@@ -10,18 +10,6 @@ const envSchema = z
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     /** Origem do front. Usada na checagem de Origin (CSRF), nos links de e-mail e no cookie Secure. */
     WEB_ORIGIN: z.url().default('http://localhost:3000'),
-    /** `console` só escreve o e-mail no log: serve para desenvolvimento e testes. */
-    MAIL_DRIVER: z.enum(['console', 'smtp']).default('console'),
-    /** Com `MAIL_DRIVER=smtp`: servidor, porta, usuário/senha e remetente. */
-    SMTP_HOST: z.string().min(1).optional(),
-    SMTP_PORT: z.coerce.number().int().positive().default(587),
-    /** `true` = TLS direto (465). `false` = STARTTLS (587). */
-    SMTP_SECURE: z.stringbool().default(false),
-    /** Exige STARTTLS (nunca manda e-mail em texto puro). Só pode ser desligado fora de produção (caixa de teste). */
-    SMTP_REQUIRE_TLS: z.stringbool().default(true),
-    SMTP_USER: z.string().min(1).optional(),
-    SMTP_PASSWORD: z.string().min(1).optional(),
-    MAIL_FROM: z.string().min(3).optional(),
     /**
      * Quem o Express considera proxy confiável para ler o IP real no `X-Forwarded-For`
      * (lista separada por vírgula: `loopback`, `uniquelocal`, IP ou CIDR). Padrão: só a própria
@@ -39,19 +27,20 @@ const envSchema = z
     FILES_DIR: z.string().min(1).default('./storage'),
     /**
      * Segredo das URLs assinadas (arquivos privados, ex.: certificados) e base da chave que cifra as
-     * credenciais do Mercado Pago no banco (trocar este valor obriga a cadastrá-las de novo no
-     * painel). `openssl rand -hex 32`.
+     * credenciais do Mercado Pago e a senha do e-mail no banco (trocar este valor obriga a
+     * cadastrá-las de novo no painel). `openssl rand -hex 32`.
      */
     FILES_SIGNING_SECRET: z.string().min(32).optional(),
 
     /**
      * Ambiente de DEMONSTRAÇÃO publicado. Em produção: pagamento sempre pelo simulador (nada é
-     * cobrado, mesmo com credenciais do Mercado Pago no painel) e e-mail no log
-     * (`MAIL_DRIVER=console`), com as contas novas já confirmadas. Todas as outras travas de
-     * produção continuam valendo. Nunca ligue num site que vende de verdade.
+     * cobrado, mesmo com credenciais do Mercado Pago no painel) e e-mail só no log (a configuração
+     * de e-mail do painel fica desligada), com as contas novas já confirmadas. Todas as outras travas
+     * de produção continuam valendo. Nunca ligue num site que vende de verdade.
      *
-     * O Mercado Pago NÃO é configurado aqui: o admin cola as credenciais no painel (Configurações →
-     * Financeiro) e elas ficam cifradas no banco (ver `PaymentCredentialsService`).
+     * Mercado Pago e e-mail NÃO são configurados aqui: o admin cadastra no painel (Configurações →
+     * Financeiro e E-mail) e os segredos ficam cifrados no banco (ver `PaymentCredentialsService` e
+     * `MailSettingsService`).
      */
     DEMO_MODE: z.stringbool().default(false),
     /** Prefixo dos códigos de certificado (marca da plataforma): 2 a 8 letras maiúsculas. */
@@ -64,31 +53,8 @@ const envSchema = z
     const fail = (path: keyof typeof env, message: string) =>
       ctx.addIssue({ code: 'custom', path: [path], message })
 
-    if (env.MAIL_DRIVER === 'smtp') {
-      if (!env.SMTP_HOST) fail('SMTP_HOST', 'obrigatório com MAIL_DRIVER=smtp')
-      if (!env.MAIL_FROM) fail('MAIL_FROM', 'obrigatório com MAIL_DRIVER=smtp')
-      if (Boolean(env.SMTP_USER) !== Boolean(env.SMTP_PASSWORD)) {
-        fail('SMTP_PASSWORD', 'SMTP_USER e SMTP_PASSWORD andam juntos')
-      }
-    }
-
-    // Na demonstração a conta nova nasce confirmada porque não há e-mail de verdade: com SMTP
-    // ligado, isso deixaria alguém ocupar o e-mail real de outra pessoa sem abrir o link.
-    if (env.DEMO_MODE && env.MAIL_DRIVER !== 'console') {
-      fail('MAIL_DRIVER', 'com DEMO_MODE o e-mail fica só no log ("console")')
-    }
-
     if (env.NODE_ENV !== 'production') return
 
-    if (env.MAIL_DRIVER === 'console' && !env.DEMO_MODE) {
-      fail('MAIL_DRIVER', 'não pode ser "console" em produção')
-    }
-    if (env.MAIL_DRIVER === 'smtp' && !env.SMTP_SECURE && !env.SMTP_REQUIRE_TLS) {
-      fail(
-        'SMTP_REQUIRE_TLS',
-        'em produção o e-mail precisa de TLS (SMTP_SECURE=true ou SMTP_REQUIRE_TLS=true)',
-      )
-    }
     if (!env.RATE_LIMIT_ENABLED) fail('RATE_LIMIT_ENABLED', 'não pode ser desligado em produção')
     if (new URL(env.WEB_ORIGIN).protocol !== 'https:')
       fail('WEB_ORIGIN', 'precisa ser https em produção')
@@ -105,7 +71,7 @@ export type Env = z.infer<typeof envSchema>
 
 /** Lê e valida as variáveis de ambiente. Falha cedo, com mensagem clara, se faltar algo. */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  // Variável em branco (`SMTP_USER=` no .env, ou `${VAR:-}` no compose) vale como "não definida".
+  // Variável em branco (`INTERNAL_API_KEY=` no .env, ou `${VAR:-}` no compose) vale como "não definida".
   const present = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ''))
   const parsed = envSchema.safeParse(present)
   if (!parsed.success) {

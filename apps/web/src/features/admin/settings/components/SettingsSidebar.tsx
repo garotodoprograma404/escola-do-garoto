@@ -1,6 +1,6 @@
 'use client'
 
-import { Settings, Palette, DollarSign, FileText } from 'lucide-react'
+import { Settings, Palette, DollarSign, Mail, FileText } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import type { SettingsSection } from '../types'
 
@@ -13,6 +13,7 @@ const SECTIONS = [
   { id: 'general' as const, label: 'Geral', icon: Settings },
   { id: 'branding' as const, label: 'Marca', icon: Palette },
   { id: 'financial' as const, label: 'Financeiro', icon: DollarSign },
+  { id: 'email' as const, label: 'E-mail', icon: Mail },
   { id: 'legal' as const, label: 'Legal', icon: FileText },
 ]
 

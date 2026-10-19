@@ -71,7 +71,8 @@ A API aplica as migrations ao subir em produção.
 ## Autenticação e sessão
 
 Cadastro com confirmação de e-mail, login, sessão por token opaco (hash no banco) em cookie `HttpOnly`,
-recuperação de senha. Papéis: `student`, `producer`, `affiliate`, `admin` (um usuário pode ter vários).
+recuperação de senha. Os e-mails saem pelo servidor SMTP cadastrado no painel (`DynamicMailService`; sem
+servidor, só no log fora de produção). Papéis: `student`, `producer`, `affiliate`, `admin` (um usuário pode ter vários).
 Proteções em [seguranca.md](seguranca.md).
 
 ## Tempo real

@@ -11,11 +11,14 @@ export type SmtpConfig = {
   password?: string
   /** Exige STARTTLS quando não é TLS direto (padrão). */
   requireTls: boolean
-  /** Remetente: `Nome <contato@dominio.com.br>`. */
-  from: string
+  /** Remetente: `Nome <contato@dominio.com.br>`, ou nome e endereço separados (sem montar texto). */
+  from: string | { name: string; address: string }
 }
 
-/** Envio real por SMTP (Resend, SES, Brevo, Gmail…). Só texto: é o que os e-mails do sistema usam. */
+/**
+ * Envio real por SMTP (Resend, SES, Brevo, Gmail…). Só texto: é o que os e-mails do sistema usam.
+ * A configuração vem do painel do admin (ver `MailSettingsService`).
+ */
 @Injectable()
 export class SmtpMailService extends MailService {
   private readonly transport: Transporter
@@ -37,6 +40,11 @@ export class SmtpMailService extends MailService {
         greetingTimeout: 10_000,
         socketTimeout: 20_000,
       })
+  }
+
+  /** Conecta e autentica no servidor, sem enviar nada (conferência ao salvar no painel). */
+  async verify(): Promise<void> {
+    await this.transport.verify()
   }
 
   async send(message: MailMessage) {

@@ -18,7 +18,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "nest build && node dist/database/seed.js",
     "db:seed:demo": "nest build && node dist/database/seed-demo.js",
-    "db:migrate:prod": "node dist/database/migrate.js"
+    "db:migrate:prod": "node dist/database/migrate.js",
+    "admin:create": "nest build && node dist/database/create-admin.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

@@ -128,11 +128,25 @@ endereço da conexão quando o cabeçalho é lixo. Em produção o IP só é con
 `TRUSTED_PROXIES`. Não coloque o rewrite do Next entre o usuário e a API em produção, pois ele repassa o
 cabeçalho que o cliente mandou. O IP validado é o registrado na auditoria.
 
-## E-mail com TLS
+## E-mail configurado no painel, sempre com TLS
 
-Com `MAIL_DRIVER=smtp`, o envio exige TLS: `SMTP_SECURE=true` (TLS direto) ou `SMTP_REQUIRE_TLS=true`
-(STARTTLS obrigatório). Em produção a API **não sobe** com `MAIL_DRIVER=console` (ninguém receberia o link de
-confirmação) nem com SMTP sem TLS.
+O servidor SMTP é cadastrado pelo admin em Configurações → E-mail (`MailSettingsService`), nada no `.env`:
+
+- a senha fica cifrada no banco (AES-256-GCM, chave derivada do `FILES_SIGNING_SECRET`, propósito
+  próprio) e nunca volta para a tela nem para a auditoria;
+- ao salvar, a API conecta e autentica no servidor; configuração errada não entra;
+- em produção o envio exige TLS (TLS direto na 465 ou STARTTLS obrigatório) e só aceita as portas de e-mail
+  (25, 465, 587, 2525), para o "conferir conexão" não virar sonda da rede interna;
+- a senha salva só é reaproveitada com o mesmo servidor, porta e usuário: trocar o servidor exige digitar a
+  senha de novo (senão ela iria, no login SMTP, para um servidor qualquer);
+- em produção o servidor precisa resolver para um endereço público (IP interno, `localhost` e nomes de
+  container são recusados);
+- o e-mail de teste vai só para o e-mail do admin logado (nunca para um endereço digitado);
+- na demonstração (`DEMO_MODE`) a configuração fica desligada e o e-mail vai só para o log;
+- produção sem servidor cadastrado: nenhum e-mail sai, o painel mostra o aviso em vermelho e o cadastro pelo
+  site fica fechado com aviso (ninguém se cadastra sem conseguir confirmar);
+- o primeiro admin nasce pelo comando `create-admin` (terminal do servidor), nunca confirmando conta por SQL:
+  quem se cadastrasse antes do dono com o e-mail dele manteria a própria senha.
 
 ## Configuração insegura não sobe
 

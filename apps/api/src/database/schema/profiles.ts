@@ -232,3 +232,40 @@ export const platformSettings = pgTable(
     unique('platform_settings_key_key').on(table.key),
   ],
 )
+
+/**
+ * Servidor de e-mail (SMTP) cadastrado pelo admin no painel (Configurações → E-mail), no lugar de
+ * variáveis de ambiente. Uma linha só (`provider = 'smtp'`); a senha fica cifrada (ver
+ * `MailSettingsService`) e nunca volta para a tela.
+ */
+export const mailSettings = pgTable(
+  'mail_settings',
+  {
+    id: bigint({ mode: 'number' })
+      .primaryKey()
+      .generatedAlwaysAsIdentity({ name: 'mail_settings_id_seq' }),
+    provider: text().notNull(),
+    host: text().notNull(),
+    port: integer().notNull(),
+    /** `true` = TLS direto (porta 465). `false` = STARTTLS (porta 587). */
+    secure: boolean().notNull(),
+    smtpUser: text('smtp_user'),
+    passwordSealed: text('password_sealed'),
+    fromName: text('from_name').notNull(),
+    fromEmail: text('from_email').notNull(),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    updatedBy: uuid('updated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique('mail_settings_provider_key').on(table.provider),
+    index('idx_mail_settings_updated_by').using('btree', table.updatedBy.asc().nullsLast()),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: 'mail_settings_updated_by_fkey',
+    }).onDelete('set null'),
+    check('mail_settings_port_check', sql`port between 1 and 65535`),
+  ],
+)
